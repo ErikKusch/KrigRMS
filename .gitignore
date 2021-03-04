@@ -37,3 +37,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Personal Settings file containing CDS credentials
+PersonalSettings.R
+
+# Folders of data
+ShapeFiles/
+Covariates/
