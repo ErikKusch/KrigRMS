@@ -44,3 +44,7 @@ PersonalSettings.R
 # Folders of data
 ShapeFiles/
 Covariates/
+Projections/*
+Figures/
+
+!/Projections/X - Raw Data/
