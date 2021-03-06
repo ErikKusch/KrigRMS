@@ -17,7 +17,7 @@ if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credent
 
 #### NUMBER OF CORES
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
-  numberOfCores <- readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores()))
+  numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
 } # end of Core check
 
 ####--------------- .   DIRECTORIES -------------------------------------------------
