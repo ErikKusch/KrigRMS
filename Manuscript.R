@@ -313,7 +313,7 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1D.nc"), file.path(Dir.Fig1, "SE_Fi
     Data = Era5Land_SAT,
     Covariates_coarse = Covs_UK[[2]],
     Covariates_fine = Covs_UK[[1]],
-    KrigingEquation = "ERA ~ DEM+AspectClS+ApsectClN+AspectClW+AspectClE",
+    KrigingEquation = "ERA ~ DEM+Slope_aspect_N+Slope_aspect_S+Slope_aspect_W+Slope_aspect_E",
     Cores = 1,
     Dir = Dir.Fig1,
     FileName = "Fig1D",
@@ -341,7 +341,7 @@ if(!file.exists(file.path(Dir.Fig1, "ERA5-Land_QSOIL.nc"))){
 }
 
 if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1E.nc"), file.path(Dir.Fig1, "SE_Fig1E.nc")))) != 2){
-  Fig1A_ls <- krigR(
+  Fig1E_ls <- krigR(
     Data = Era5Land_QSOIL,
     Covariates_coarse = Covs_UK[[2]],
     Covariates_fine = Covs_UK[[1]],
@@ -355,7 +355,7 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1E.nc"), file.path(Dir.Fig1, "SE_Fi
 }
 
 if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1F.nc"), file.path(Dir.Fig1, "SE_Fig1F.nc")))) != 2){
-  Fig1B_ls <- krigR(
+  Fig1F_ls <- krigR(
     Data = Era5Land_QSOIL,
     Covariates_coarse = Covs_UK[[2]],
     Covariates_fine = Covs_UK[[1]],
@@ -369,7 +369,7 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1F.nc"), file.path(Dir.Fig1, "SE_Fi
 }
 
 if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1G.nc"), file.path(Dir.Fig1, "SE_Fig1G.nc")))) != 2){
-  Fig1C_ls <- krigR(
+  Fig1G_ls <- krigR(
     Data = Era5Land_QSOIL,
     Covariates_coarse = Covs_UK[[2]],
     Covariates_fine = Covs_UK[[1]],
@@ -383,11 +383,11 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1G.nc"), file.path(Dir.Fig1, "SE_Fi
 }
 
 if(sum(file.exists(c(file.path(Dir.Fig1, "Fig1H.nc"), file.path(Dir.Fig1, "SE_Fig1H.nc")))) != 2){
-  Fig1D_ls <- krigR(
+  Fig1H_ls <- krigR(
     Data = Era5Land_QSOIL,
     Covariates_coarse = Covs_UK[[2]],
     Covariates_fine = Covs_UK[[1]],
-    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s+AspectClS+ApsectClN+AspectClW+AspectClE",
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s+Slope_aspect_N+Slope_aspect_S+Slope_aspect_W+Slope_aspect_E",
     Cores = 1,
     Dir = Dir.Fig1,
     FileName = "Fig1H",
@@ -436,7 +436,7 @@ if(!dir.exists(Dir.Fig3)){dir.create(Dir.Fig3)}
 options(timeout=500)
 
 #### .   ERA5-LAND -----------------------------------------------------------
-if(!file.exists(file.path(Dir.Figures, "Era5Land_UK.nc"))){
+if(!file.exists(file.path(Dir.Fig3, "Era5Land_UK.nc"))){
   Era5Land_UK <- download_ERA(
     Variable = "2m_temperature",
     DateStart = "1981-01-01",
@@ -444,29 +444,29 @@ if(!file.exists(file.path(Dir.Figures, "Era5Land_UK.nc"))){
     TResolution = "month",
     TStep = 1,
     Extent = UK_shp,
-    Dir = Dir.Figures,
+    Dir = Dir.Fig3,
     FileName = "Era5Land_UK",
     API_Key = API_Key,
     API_User = API_User
   ) 
 }else{
-  Era5Land_UK <- raster(file.path(Dir.Figures, "Era5Land_UK.nc"))
+  Era5Land_UK <- stack(file.path(Dir.Fig3, "Era5Land_UK.nc"))
 }
-if(!file.exists(file.path(Dir.Figures, "Era5Land_AK.nc"))){
+if(!file.exists(file.path(Dir.Fig3, "Era5Land_AK.nc"))){
   REF_AK <- download_ERA(
     Variable = "2m_temperature",
-    DateStart = "1984-10-01",
-    DateStop = "1984-10-31",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
     TResolution = "month",
     TStep = 1,
     Extent = AK_shp,
-    Dir = Dir.Figures,
+    Dir = Dir.Fig3,
     FileName = "Era5Land_AK",
     API_Key = API_Key,
     API_User = API_User
   ) 
 }else{
-  Era5Land_AK <- raster(file.path(Dir.Figures, "Era5Land_AK.nc"))
+  Era5Land_AK <- stack(file.path(Dir.Fig3, "Era5Land_AK.nc"))
 }
 
 #### .   TERRACLIMATE -----------------------------------------------------------
@@ -474,9 +474,9 @@ if(!file.exists(file.path(Dir.Figures, "Era5Land_AK.nc"))){
 ## (https://www.northwestknowledge.net/data/5956e20ceb1bc6513f464d11/unzipped/TERRACLIMATE/ & https://climate.northwestknowledge.net/TERRACLIMATE/index_directDownloads.php)
 ## NOTE: Yes, no average temperature. Weird, I know. Daily records available for Europe only here: https://www.envidat.ch/#/metadata/eur11
 Dir.TC <- file.path(Dir.Fig3, "TerraClimate")
+if(!dir.exists(Dir.TC)){dir.create(Dir.TC)}
 
 if(sum(file.exists(c(file.path(Dir.TC, paste("TC", "tmean", "AK.nc", sep="_")), file.path(Dir.TC, paste("TC", "tmean", "UK.nc", sep="_"))))) != 2){
-  dir.create(Dir.TC)
   Vars <- c("tmin", "tmax")
   dates <- 1981:2000
   for(i in 1:length(Vars)){
@@ -526,7 +526,7 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3A.nc"), file.path(Dir.Fig3, "SE_Fi
   Fig3A_ls <- krigR(
     Data = Era5Land_UK,
     Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK$DEM, TC_UK),
+    Covariates_fine = resample(Covs_UK[[1]], TC_UK),
     KrigingEquation = "ERA ~ DEM",
     Cores = numberOfCores,
     Dir = Dir.Fig3,
@@ -540,7 +540,7 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3D.nc"), file.path(Dir.Fig3, "SE_Fi
   Fig3D_ls <- krigR(
     Data = Era5Land_AK,
     Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK$DEM, TC_AK),
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, TC_AK),
     KrigingEquation = "ERA ~ DEM",
     Cores = numberOfCores,
     Dir = Dir.Fig3,
@@ -590,7 +590,7 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3B.nc"), file.path(Dir.Fig3, "SE_Fi
   Fig3B_ls <- krigR(
     Data = Era5Land_UK,
     Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK$DEM, CHELSA_UK),
+    Covariates_fine = resample(Covs_UK[[1]]$DEM, CHELSA_UK),
     KrigingEquation = "ERA ~ DEM",
     Cores = numberOfCores,
     Dir = Dir.Fig3,
@@ -604,7 +604,7 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3E.nc"), file.path(Dir.Fig3, "SE_Fi
   Fig3E_ls <- krigR(
     Data = Era5Land_AK,
     Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK$DEM, CHELSA_AK),
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, CHELSA_AK),
     KrigingEquation = "ERA ~ DEM",
     Cores = numberOfCores,
     Dir = Dir.Fig3,
@@ -682,7 +682,7 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3C.nc"), file.path(Dir.Fig3, "SE_Fi
   Fig3C_ls <- krigR(
     Data = Era5Land_UK,
     Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK$DEM, WC_UK),
+    Covariates_fine = resample(Covs_UK[[1]]$DEM, WC_UK),
     KrigingEquation = "ERA ~ DEM",
     Cores = numberOfCores,
     Dir = Dir.Fig3,
@@ -696,7 +696,7 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3F.nc"), file.path(Dir.Fig3, "SE_Fi
   Fig3F_ls <- krigR(
     Data = Era5Land_AK,
     Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK$DEM, WC_AK),
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, WC_AK),
     KrigingEquation = "ERA ~ DEM",
     Cores = numberOfCores,
     Dir = Dir.Fig3,
@@ -705,6 +705,9 @@ if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3F.nc"), file.path(Dir.Fig3, "SE_Fi
     nmax = 480
   )
 }
+
+
+#### CLIMATOLOGY FOR WORLDLCIM S2.1!!!!
 
 #### [FIGURE S2] (Localised Kriging and the nmax-trade-off) -----------------------------------------------------------
 Dir.FigS2 <- file.path(Dir.Figures, "FigureS2")
