@@ -401,34 +401,447 @@ Dir.Fig2 <- file.path(Dir.Figures, "Figure2")
 if(!dir.exists(Dir.Fig2)){dir.create(Dir.Fig2)}
 
 #### .   DYNAMICAL -----------------------------------------------------------
+# FigA) 9pm 8th September 1984, ensemble members and then sd of all layers in cdo/matlab
+if(!file.exists(file.path(Dir.Fig2, "Fig2A.nc"))){
+  Fig2A_ls <- download_ERA(
+    DataSet = "era5",
+    Type = "ensemble_members", 
+    Variable = "2m_temperature",
+    DateStart = "1984-10-08",
+    DateStop = "1984-10-08",
+    TResolution = "hour",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig2,
+    FileName = "Fig2A",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  writeRaster(x = Fig2A_ls[[71:80]], file.path(Dir.Fig2, "Fig2A.nc"), overwrite = TRUE, format = "CDF")
+}
 
-# FigA) 9pm 8th September 1984, ensemble members and then sd of all layers
-# FigD) 9pm 8th September 1984, ensemble members and then sd of all layers
+# FigD) 9pm 8th September 1984, ensemble members and then sd of all layers in cdo/matlab
+if(!file.exists(file.path(Dir.Fig2, "Fig2D.nc"))){
+  Fig2D_ls <- download_ERA(
+    DataSet = "era5",
+    Type = "ensemble_members", 
+    Variable = "volumetric_soil_water_layer_1",
+    DateStart = "1984-10-08",
+    DateStop = "1984-10-08",
+    TResolution = "hour",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig2,
+    FileName = "Fig2A",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  writeRaster(x = Fig2D_ls[[71:80]], file.path(Dir.Fig2, "Fig2D.nc"), overwrite = TRUE, format = "CDF")
+}
 
 # FigC+F) 
 ## Dynamical: 
-### Hourly resolution: Download start of data until 31st 12 2000 at hourly resolution, sd across ensemble at each time-step, mean of all time-steps
-### Average Monthly ensemble members to to monthly ensemble members, then take sd across ensemble at each time step, mean of all time-steps
-### Yearly ensemble mean first per ensemble member, etc. as for monthly
+### Hourly resolution: Download start of data until 31st 12 2000 at hourly resolution, sd across ensemble at each time-step, mean of all time-steps in cdo/matlab
+if(!file.exists(file.path(Dir.Fig2, "Fig2C_DynamHour.nc"))){
+  while(!exists("Fig2C_DynamHour_ls")){
+    try(
+      Fig2C_DynamHour_ls <- download_ERA(
+        DataSet = "era5",
+        Type = "ensemble_members", 
+        Variable = "2m_temperature",
+        DateStart = "1981-01-01",
+        DateStop = "2000-12-31",
+        TResolution = "hour",
+        TStep = 1,
+        Extent = UK_shp,
+        Dir = Dir.Fig2,
+        FileName = "Fig2C_DynamHour",
+        API_Key = API_Key,
+        API_User = API_User
+      )
+    )
+  }
+}
+if(!file.exists(file.path(Dir.Fig2, "Fig2F_DynamHour.nc"))){
+  while(!exists("Fig2F_DynamHour_ls")){
+    try(
+      Fig2F_DynamHour_ls <- download_ERA(
+        DataSet = "era5",
+        Type = "ensemble_members", 
+        Variable = "volumetric_soil_water_layer_1",
+        DateStart = "1981-01-01",
+        DateStop = "2000-12-31",
+        TResolution = "hour",
+        TStep = 1,
+        Extent = UK_shp,
+        Dir = Dir.Fig2,
+        FileName = "Fig2F_DynamHour",
+        API_Key = API_Key,
+        API_User = API_User
+      )
+    )
+  }
+}
+### Average Monthly ensemble members to to monthly ensemble members, then take sd across ensemble at each time step, mean of all time-steps in cdo/matlab
+if(!file.exists(file.path(Dir.Fig2, "Fig2C_DynamMonth.nc"))){
+  while(!exists("Fig2C_DynamMonth_ls")){
+    try(
+      Fig2C_DynamMonth_ls <- download_ERA(
+        DataSet = "era5",
+        Type = "ensemble_members", 
+        Variable = "2m_temperature",
+        DateStart = "1981-01-01",
+        DateStop = "2000-12-31",
+        TResolution = "month",
+        TStep = 1,
+        Extent = UK_shp,
+        Dir = Dir.Fig2,
+        FileName = "Fig2C_DynamMonth",
+        API_Key = API_Key,
+        API_User = API_User
+      )
+    )
+  }
+}
+if(!file.exists(file.path(Dir.Fig2, "Fig2F_DynamMonth.nc"))){
+  while(!exists("Fig2F_DynamMonth_ls")){
+    try(
+      Fig2F_DynamMonth_ls <- download_ERA(
+        DataSet = "era5",
+        Type = "ensemble_members", 
+        Variable = "volumetric_soil_water_layer_1",
+        DateStart = "1981-01-01",
+        DateStop = "2000-12-31",
+        TResolution = "month",
+        TStep = 1,
+        Extent = UK_shp,
+        Dir = Dir.Fig2,
+        FileName = "Fig2F_DynamMonth",
+        API_Key = API_Key,
+        API_User = API_User
+      )
+    )
+  }
+}
 
+### Yearly ensemble mean first per ensemble member, etc. as for monthly
+if(!file.exists(file.path(Dir.Fig2, "Fig2C_DynamYear.nc"))){
+  Month_nc <- stack(file.path(Dir.Fig2, "Fig2C_DynamMonth.nc"))
+  Members <- str_pad(rep(c(1:10), length.out = nlayers(Month_nc)), width = 4, "left", "0")
+  Years <- str_pad(rep(c(1:(nlayers(Month_nc)/12/10)), each = 12*10), width = 4, "left", "0")
+  Index <- factor(paste(Years, Members, sep="_"))
+  Index <- as.integer(Index)
+  Fig2C_DynamYear_ls <- stackApply(x = Month_nc, indices = Index, fun = "mean")
+  writeRaster(x = Fig2C_DynamYear_ls, file.path(Dir.Fig2, "Fig2C_DynamYear.nc"), overwrite = TRUE, format = "CDF")
+}
+if(!file.exists(file.path(Dir.Fig2, "Fig2F_DynamYear.nc"))){
+  Month_nc <- stack(file.path(Dir.Fig2, "Fig2F_DynamMonth.nc"))
+  Members <- str_pad(rep(c(1:10), length.out = nlayers(Month_nc)), width = 4, "left", "0")
+  Years <- str_pad(rep(c(1:(nlayers(Month_nc)/12/10)), each = 12*10), width = 4, "left", "0")
+  Index <- factor(paste(Years, Members, sep="_"))
+  Index <- as.integer(Index)
+  Fig2F_DynamYear_ls <- stackApply(x = Month_nc, indices = Index, fun = "mean")
+  writeRaster(x = Fig2F_DynamYear_ls, file.path(Dir.Fig2, "Fig2F_DynamYear.nc"), overwrite = TRUE, format = "CDF")
+}
+
+### Climatology: 1981-2000
+if(!file.exists(file.path(Dir.Fig2, "Fig2C_DynamClim.nc"))){
+  Year_nc <- stack(file.path(Dir.Fig2, "Fig2C_DynamYear.nc"))
+  Index <-  rep(c(1:10), nlayers(Year_nc)/10)
+  Fig2C_DynamClim_ls <- stackApply(x = Year_nc, indices = Index, fun = "mean")
+  writeRaster(x = Fig2C_DynamClim_ls, file.path(Dir.Fig2, "Fig2C_DynamClim.nc"), overwrite = TRUE, format = "CDF")
+}
+if(!file.exists(file.path(Dir.Fig2, "Fig2F_DynamClim.nc"))){
+  Year_nc <- stack(file.path(Dir.Fig2, "Fig2F_DynamYear.nc"))
+  Index <-  rep(c(1:10), nlayers(Year_nc)/10)
+  Fig2F_DynamClim_ls <- stackApply(x = Year_nc, indices = Index, fun = "mean")
+  writeRaster(x = Fig2F_DynamClim_ls, file.path(Dir.Fig2, "Fig2F_DynamClim.nc"), overwrite = TRUE, format = "CDF")
+}
 
 #### .   STATISTICAL -----------------------------------------------------------
 
-# SAT downscaled with GMTED2010
-# Qsoil1 downscaled with CHinaData
-
 # FigB) 9pm 8th September 1984, era5-land SAT downscaled to 30arc-sec using elevation and nmax = 480
-# FigE) 9pm 8th September 1984, era5-land QSOIL1 downscaled to 30arc-sec using ChinaData and nmax = 480
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2B.nc"), file.path(Dir.Fig1, "SE_Fig2B.nc")))) != 2){
+  Fig2B_ls <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1984-10-08",
+    DateStop = "1984-10-08",
+    TResolution = "hour",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig2,
+    FileName = "Fig2B",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  Fig2B_ls <- krigR(
+    Data = Fig2B_ls[[21]],
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    Cores = 1,
+    Dir = Dir.Fig2,
+    FileName = "Fig2B",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+# FigE) 9pm 8th September 1984, era5-land QSOIL1 downscaled to 30arc-sec using SoilCovariates and nmax = 480
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2E.nc"), file.path(Dir.Fig1, "SE_Fig2E.nc")))) != 2){
+  Fig2E_ls <- download_ERA(
+    Variable = "volumetric_soil_water_layer_1",
+    DateStart = "1984-10-08",
+    DateStop = "1984-10-08",
+    TResolution = "hour",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig2,
+    FileName = "Fig2E",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  Fig2E_ls <- krigR(
+    Data = Fig2E_ls[[21]],
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = 1,
+    Dir = Dir.Fig2,
+    FileName = "Fig2E",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
 
 # FigC+F) 
 ## Statistical: 
 ### Hour resolution: 15th January/April/July/October 1200 and 0000 of the year 1984, downscale each of these and average the uncertainty
-### Month: Monthly product of January/April/July/October 1984, downscale each and average the uncertainty
-### Year: Just 1984 downscale (Just one time-step!)
-### Climatology: 1981-2000, aggregate to full climatology with download_ERA() function and then downscale (Just one time-step!)
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatHour.nc"), file.path(Dir.Fig1, "SE_Fig2CStatHour.nc")))) != 2){
+  Fig2CStatHour_ls <- as.list(rep(NA, 8))
+  Counter <- 1
+  for(i in c("01","04","07","10")){
+    Fig2CStatHour_ls[Counter:Counter+1] <- download_ERA(
+      Variable = "2m_temperature",
+      DateStart = paste0("1984-",i,"-15"),
+      DateStop = paste0("1984-",i,"-15"),
+      TResolution = "hour",
+      TStep = 1,
+      Extent = UK_shp,
+      Dir = Dir.Fig2,
+      FileName = "Fig2CStatHour",
+      API_Key = API_Key,
+      API_User = API_User
+    )[[c(12,24)]]
+    Counter <- Counter + 2 
+  }
+  Fig2CStatHour_ls <- stack(Fig2CStatHour_ls)
+  Fig2CStatHour_ls <- krigR(
+    Data = Fig2CStatHour_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    Cores = parallel::detectCores(),
+    Dir = Dir.Fig2,
+    FileName = "Fig2CStatHour",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2FStatHour.nc"), file.path(Dir.Fig1, "SE_Fig2FStatHour.nc")))) != 2){
+  Fig2FStatHour_ls <- as.list(rep(NA, 8))
+  Counter <- 1
+  for(i in c("01","04","07","10")){
+    Fig2FStatHour_ls[Counter:Counter+1] <- download_ERA(
+      Variable = "volumetric_soil_water_layer_1",
+      DateStart = paste0("1984-",i,"-15"),
+      DateStop = paste0("1984-",i,"-15"),
+      TResolution = "hour",
+      TStep = 1,
+      Extent = UK_shp,
+      Dir = Dir.Fig2,
+      FileName = "Fig2FStatHour",
+      API_Key = API_Key,
+      API_User = API_User
+    )[[c(12,24)]]
+    Counter <- Counter + 2 
+  }
+  Fig2FStatHour_ls <- stack(Fig2FStatHour_ls)
+  Fig2FStatHour_ls <- krigR(
+    Data = Fig2FStatHour_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = parallel::detectCores(),
+    Dir = Dir.Fig2,
+    FileName = "Fig2FStatHour",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
 
-### Average Monthly ensemble members to to monthly ensemble members, then take sd across ensemble at each time step, mean of all time-steps
-### Yearly ensemble mean first per ensemble member, etc. as for monthly
+### Month: Monthly product of January/April/July/October 1984, downscale each and average the uncertainty
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatMonth.nc"), file.path(Dir.Fig1, "SE_Fig2CStatMonth.nc")))) != 2){
+  Fig2CStatMonth_ls <- as.list(rep(NA, 4))
+  Counter <- 1
+  for(i in c("01","04","07","10")){
+    Fig2CStatMonth_ls[Counter] <- download_ERA(
+      Variable = "2m_temperature",
+      DateStart = paste0("1984-",i,"-01"),
+      DateStop = paste0("1984-",i,"-31"),
+      TResolution = "month",
+      TStep = 1,
+      Extent = UK_shp,
+      Dir = Dir.Fig2,
+      FileName = "Fig2CStatMonth",
+      API_Key = API_Key,
+      API_User = API_User
+    )
+    Counter <- Counter + 1
+  }
+  Fig2CStatMonth_ls <- stack(Fig2CStatMonth_ls)
+  Fig2CStatMonth_ls <- krigR(
+    Data = Fig2CStatMonth_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    Cores = parallel::detectCores(),
+    Dir = Dir.Fig2,
+    FileName = "Fig2CStatMonth",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2FStatMonth.nc"), file.path(Dir.Fig1, "SE_Fig2FStatMonth.nc")))) != 2){
+  Fig2FStatMonth_ls <- as.list(rep(NA, 4))
+  Counter <- 1
+  for(i in c("01","04","07","10")){
+    Fig2FStatMonth_ls[Counter] <- download_ERA(
+      Variable = "volumetric_soil_water_layer_1",
+      DateStart = paste0("1984-",i,"-01"),
+      DateStop = paste0("1984-",i,"-31"),
+      TResolution = "month",
+      TStep = 1,
+      Extent = UK_shp,
+      Dir = Dir.Fig2,
+      FileName = "Fig2FStatMonth",
+      API_Key = API_Key,
+      API_User = API_User
+    )
+    Counter <- Counter + 1 
+  }
+  Fig2FStatMonth_ls <- stack(Fig2FStatMonth_ls)
+  Fig2FStatMonth_ls <- krigR(
+    Data = Fig2FStatMonth_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = parallel::detectCores(),
+    Dir = Dir.Fig2,
+    FileName = "Fig2FStatMonth",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+### Year: Just 1984 downscale (Just one time-step!)
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatYear.nc"), file.path(Dir.Fig1, "SE_Fig2CStatYear.nc")))) != 2){
+  Fig2CStatYear_ls <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1984-01-01",
+    DateStop = "1984-12-31",
+    TResolution = "year",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Fig2,
+    FileName = "Fig2CStatYear",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  Fig2CStatYear_ls <- krigR(
+    Data = Fig2CStatYear_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    Cores = 1,
+    Dir = Dir.Fig2,
+    FileName = "Fig2CStatYear",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2FStatYear.nc"), file.path(Dir.Fig1, "SE_Fig2FStatYear.nc")))) != 2){
+  Fig2FStatYear <- download_ERA(
+    Variable = "volumetric_soil_water_layer_1",
+    DateStart = "1984-01-01",
+    DateStop = "1984-12-31",
+    TResolution = "year",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig2,
+    FileName = "Fig2FStatYear",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  Fig2FStatYear_ls <- krigR(
+    Data = Fig2FStatYear_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = 1,
+    Dir = Dir.Fig2,
+    FileName = "Fig2FStatYear",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+### Climatology: 1981-2000, aggregate to full climatology with download_ERA() function and then downscale (Just one time-step!)
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatClima.nc"), file.path(Dir.Fig1, "SE_Fig2CStatClima.nc")))) != 2){
+  Fig2CStatClima_ls <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "year",
+    TStep = 20,
+    Extent = UK_shp,
+    Dir = Fig2,
+    FileName = "Fig2CStatClima",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  Fig2CStatClima_ls <- krigR(
+    Data = Fig2CStatClima_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    Cores = 1,
+    Dir = Dir.Fig2,
+    FileName = "Fig2CStatClima",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2FStatClima.nc"), file.path(Dir.Fig1, "SE_Fig2FStatClima.nc")))) != 2){
+  Fig2FStatClima <- download_ERA(
+    Variable = "volumetric_soil_water_layer_1",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "year",
+    TStep = 20,
+    Extent = UK_shp,
+    Dir = Dir.Fig2,
+    FileName = "Fig2FStatClima",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+  Fig2FStatClima_ls <- krigR(
+    Data = Fig2FStatClima_ls,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = Covs_UK[[1]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = 1,
+    Dir = Dir.Fig2,
+    FileName = "Fig2FStatClima",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
 
 #### [FIGURE 3] (Kriged Products vs. Competitor Climate Products for all months Jan/1981-Dec/2010) -----------------------------------------------------------
 Dir.Fig3 <- file.path(Dir.Figures, "Figure3")
