@@ -616,10 +616,10 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2E.nc"), file.path(Dir.Fig1, "SE_Fi
 ## Statistical: 
 ### Hour resolution: 15th January/April/July/October 1200 and 0000 of the year 1984, downscale each of these and average the uncertainty
 if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatHour.nc"), file.path(Dir.Fig1, "SE_Fig2CStatHour.nc")))) != 2){
-  Fig2CStatHour_ls <- as.list(rep(NA, 8))
+  Fig2CStatHour_ls <- as.list(rep(NA, 4))
   Counter <- 1
   for(i in c("01","04","07","10")){
-    Fig2CStatHour_ls[Counter:Counter+1] <- download_ERA(
+    Fig2CStatHour_ls[Counter] <- download_ERA(
       Variable = "2m_temperature",
       DateStart = paste0("1984-",i,"-15"),
       DateStop = paste0("1984-",i,"-15"),
@@ -631,7 +631,7 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatHour.nc"), file.path(Dir.Fig1
       API_Key = API_Key,
       API_User = API_User
     )[[c(12,24)]]
-    Counter <- Counter + 2 
+    Counter <- Counter + 1 
   }
   Fig2CStatHour_ls <- stack(Fig2CStatHour_ls)
   Fig2CStatHour_ls <- krigR(
@@ -646,10 +646,10 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2CStatHour.nc"), file.path(Dir.Fig1
   ) 
 }
 if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2FStatHour.nc"), file.path(Dir.Fig1, "SE_Fig2FStatHour.nc")))) != 2){
-  Fig2FStatHour_ls <- as.list(rep(NA, 8))
+  Fig2FStatHour_ls <- as.list(rep(NA, 4))
   Counter <- 1
   for(i in c("01","04","07","10")){
-    Fig2FStatHour_ls[Counter:Counter+1] <- download_ERA(
+    Fig2FStatHour_ls[Counter] <- download_ERA(
       Variable = "volumetric_soil_water_layer_1",
       DateStart = paste0("1984-",i,"-15"),
       DateStop = paste0("1984-",i,"-15"),
@@ -661,7 +661,7 @@ if(sum(file.exists(c(file.path(Dir.Fig1, "Fig2FStatHour.nc"), file.path(Dir.Fig1
       API_Key = API_Key,
       API_User = API_User
     )[[c(12,24)]]
-    Counter <- Counter + 2 
+    Counter <- Counter + 1
   }
   Fig2FStatHour_ls <- stack(Fig2FStatHour_ls)
   Fig2FStatHour_ls <- krigR(
