@@ -874,7 +874,7 @@ if(!file.exists(file.path(Dir.Fig3, "Era5Land_UK.nc"))){
   Era5Land_UK <- stack(file.path(Dir.Fig3, "Era5Land_UK.nc"))
 }
 if(!file.exists(file.path(Dir.Fig3, "Era5Land_AK.nc"))){
-  REF_AK <- download_ERA(
+  Era5Land_AK <- download_ERA(
     Variable = "2m_temperature",
     DateStart = "1981-01-01",
     DateStop = "2000-12-31",
@@ -1234,6 +1234,166 @@ saveRDS(object = Time_vec, file = file.path(Dir.FigS2, "Time_vec.rds"))
 Dir.FigS3 <- file.path(Dir.Figures, "FigureS3")
 if(!dir.exists(Dir.FigS3)){dir.create(Dir.FigS3)}
 
-# era5-land SAT for every month between 1981 and 2000, aggregate by a factor of 4 and then downscale back down to original era5-land resolution
-## SAT
-## Qsoil1
+#### .   AIR TEMPERATURE -----------------------------------------------------------
+if(!file.exists(file.path(Dir.FigS3, "Era5Land_Temp.nc"))){
+  Era5Land_Temp <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "month",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig3,
+    FileName = "Era5Land_Temp",
+    API_Key = API_Key,
+    API_User = API_User
+  ) 
+}else{
+  Era5Land_Temp <- stack(file.path(Dir.FigS3, "Era5Land_Temp.nc"))
+}
+Aggregated_Temp <- aggregate(Era5Land_Temp, fact = 4, fun=mean, expand=TRUE, na.rm=TRUE)
+
+Temp_nearest <- resample(Aggregated_Temp, Aggregated_Temp, method = "ngb")
+writeRaster(Temp_nearest, filename = file.path(Dir.FigS3, "Temp_NN.nc"), overwrite = TRUE)
+Temp_bilinear <- resample(Aggregated_Temp, Aggregated_Temp, method = "bilinear")
+writeRaster(Temp_bilinear, filename = file.path(Dir.FigS3, "Temp_bilin.nc"), overwrite = TRUE)
+
+Covs_UK[[1]] <- resample(Covs_UK[[2]], Aggregated_Temp, method = "bilinear")
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3A_Krig_Elev.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Temp,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3A_Krig_Elev",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3A_Krig_Soil.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Temp,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ DEM+tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3A_Krig_Soil",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3A_Krig_SloDir.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Temp,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ DEM+Slope_aspect_N+Slope_aspect_S+Slope_aspect_E+Slope_aspect_W",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3A_Krig_SloDir",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3A_Krig_SloStp.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Temp,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ DEM+Slopes1+Slopes2+Slopes3+Slopes4+Slopes5+Slopes6+Slopes7+Slopes8",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3A_Krig_SloStp",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+
+#### .   SOIL MOISTURE -----------------------------------------------------------
+if(!file.exists(file.path(Dir.FigS3, "Era5Land_Qsoil.nc"))){
+  Era5Land_Qsoil <- download_ERA(
+    Variable = "volumetric_soil_water_layer_1",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "month",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig3,
+    FileName = "Era5Land_Qsoil",
+    API_Key = API_Key,
+    API_User = API_User
+  ) 
+}else{
+  Era5Land_Qsoil <- stack(file.path(Dir.FigS3, "Era5Land_Qsoil.nc"))
+}
+Aggregated_Qsoil <- aggregate(Era5Land_Qsoil, fact = 4, fun=mean, expand=TRUE, na.rm=TRUE)
+
+Qsoil_nearest <- resample(Aggregated_Qsoil, Aggregated_Qsoil, method = "ngb")
+writeRaster(Qsoil_nearest, filename = file.path(Dir.FigS3, "Qsoil_NN.nc"), overwrite = TRUE)
+Qsoil_bilinear <- resample(Aggregated_Qsoil, Aggregated_Qsoil, method = "bilinear")
+writeRaster(Qsoil_bilinear, filename = file.path(Dir.FigS3, "Qsoil_bilin.nc"), overwrite = TRUE)
+
+Covs_UK[[1]] <- resample(Covs_UK[[2]], Aggregated_Qsoil, method = "bilinear")
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3C_Krig_Elev.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Qsoil,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3C_Krig_Elev",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3C_Krig_Soil.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Qsoil,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ DEM+tkdry+tksat+csol+k_s+lambda+psi+theta_s",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3C_Krig_Soil",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3C_Krig_SloDir.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Qsoil,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s+Slope_aspect_N+Slope_aspect_S+Slope_aspect_E+Slope_aspect_W",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3C_Krig_SloDir",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
+
+if(!file.exists(file.path(Dir.FigS3, "FigS3C_Krig_SloStp.nc"))){
+  Fig2B_ls <- krigR(
+    Data = Aggregated_Qsoil,
+    Covariates_coarse = Covs_UK[[1]],
+    Covariates_fine = Covs_UK[[2]],
+    KrigingEquation = "ERA ~ tkdry+tksat+csol+k_s+lambda+psi+theta_s+Slopes1+Slopes2+Slopes3+Slopes4+Slopes5+Slopes6+Slopes7+Slopes8",
+    Cores = numberOfCores,
+    Dir = Dir.FigS3,
+    FileName = "FigS3C_Krig_SloStp",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  ) 
+}
