@@ -31,6 +31,8 @@ package_vec <- c(
 )
 sapply(package_vec, install.load.package)
 
+options(timeout = max(600, getOption("timeout"))) # setting timeout option
+
 #### .   DIRECTORIES ---------------------------------------------------------
 Dir.Base <- getwd() # read out the project directory
 Dir.Figures <- file.path(Dir.Base, "Figures")
@@ -79,8 +81,7 @@ if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV,
       Dir.Soil <- file.path(Dir.COV, Soil_Iter)
       dir.create(Dir.Soil)
       download.file(paste0("http://globalchange.bnu.edu.cn/download/data/worldptf/", Soil_Iter,".zip"),
-                    destfile = file.path(Dir.Soil, paste0(Soil_Iter, ".zip")), 
-                    timeout = 60*100
+                    destfile = file.path(Dir.Soil, paste0(Soil_Iter, ".zip"))
       ) # download data
       unzip(file.path(Dir.Soil, paste0(Soil_Iter, ".zip")), exdir = Dir.Soil) # unzip data
       File <- list.files(Dir.Soil, pattern = ".nc")[1] # only keep first soil layer
@@ -909,7 +910,7 @@ if(sum(file.exists(c(file.path(Dir.TC, paste("TC", "tmean", "AK.nc", sep="_")), 
     for(k in 1:length(dates)){
       URL <- paste0("https://climate.northwestknowledge.net/TERRACLIMATE-DATA/TerraClimate_", Vars[i], "_", dates[k], ".nc")
       if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")))){
-        download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")), method="libcurl", mode = "wb", timeout = 60*100)
+        download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")), method="libcurl", mode = "wb")
       }
     }
     setwd(Dir.Iter)
