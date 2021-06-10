@@ -8,6 +8,7 @@ if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
 library(KrigR) 
 
 try(source("PersonalSettings.R")) # I do this here to specify number of cores and API credentials and am thus not sharing this file
+source("KrigSleep.R") # version of Kriging that enables sys-sleep at the end of each computation to circumvent overheating of RAM modules
 
 #### CDS API (needed for ERA5-Land downloads)
 if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
@@ -105,7 +106,7 @@ for(Climatology_Iter in 1:length(Climatologies_fs)){
   ####--------------- .   KRIGING --------------------------------------------------------
   print("Kriging. ####################################################################")
   Begin <- Sys.time()
-  Krigs_ls <- KrigR::krigR(
+  Krigs_ls <- krigRLocalSleep(
     Data = stack(Data),
     Covariates_coarse = Covs_ls[[1]],
     Covariates_fine = Covs_ls[[2]],
@@ -117,6 +118,7 @@ for(Climatology_Iter in 1:length(Climatologies_fs)){
   )
   End <- Sys.time()
   print(End-Begin)
+  gc()
 }
 
 ####--------------- [2] HISTORICAL ERA5-LAND KRIGING -----------------------------------
