@@ -53,6 +53,7 @@ if(!file.exists(file.path(Dir.Shapes, "CountryMask.zip"))){ # if land mask has n
 }
 CountryMask <- readOGR(Dir.Shapes, "ne_10m_admin_0_countries", verbose = FALSE) # read country mask in
 UK_shp <- CountryMask[CountryMask$NAME == "United Kingdom", ] # extracting UK shape
+Ken_shp <- CountryMask[CountryMask$NAME == "Kenya", ] # extracting Kenya shape
 
 #### .   STATE MASK (for producing maps with state borders) -----------------------------------------------------------
 print("#### Loading STATE MASK. ####")
@@ -96,18 +97,25 @@ if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV,
     }
   }
   
-  if(!file.exists(file.path(Dir.COV, "Soil_AK.nc")) | !file.exists(file.path(Dir.COV, "Soil_UK.nc"))){
+  if(!file.exists(file.path(Dir.COV, "Soil_AK.nc"))){
     SoilCovs_stack <- stack(SoilCovs_ls)
     SoilCovs_AK <- crop(SoilCovs_stack, AK_shp)
     SoilCovs_AK <- mask(SoilCovs_AK, AK_shp)
     writeRaster(x = SoilCovs_AK, filename = file.path(Dir.COV, "Soil_AK"), format = "CDF")
+  }
+  if(!file.exists(file.path(Dir.COV, "Soil_UK.nc"))){
     SoilCovs_UK <- crop(SoilCovs_stack, UK_shp)
     SoilCovs_UK <- mask(SoilCovs_UK, UK_shp)
     writeRaster(x = SoilCovs_UK, filename = file.path(Dir.COV, "Soil_UK"), format = "CDF")
-  }else{
-    SoilCovs_AK <- stack( file.path(Dir.COV, "Soil_AK.nc"))
-    SoilCovs_UK <- stack( file.path(Dir.COV, "Soil_UK.nc"))
   }
+  if(!file.exists(file.path(Dir.COV, "Soil_Ken.nc"))){  
+    SoilCovs_Ken <- crop(SoilCovs_stack, Ken_shp)
+    SoilCovs_Ken <- mask(SoilCovs_UK, Ken_shp)
+    writeRaster(x = SoilCovs_Ken, filename = file.path(Dir.COV, "Soil_Ken"), format = "CDF")
+  }
+  SoilCovs_AK <- stack( file.path(Dir.COV, "Soil_AK.nc"))
+  SoilCovs_UK <- stack( file.path(Dir.COV, "Soil_UK.nc"))
+  SoilCovs_Ken <- stack( file.path(Dir.COV, "Soil_Ken.nc"))
 }
 
 #### .   TOPOGRAPHY COVARIATE RETRIEVAL (for kriging with other than DEM) -----------------------------------------------------------
@@ -119,96 +127,129 @@ if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV,
   TopoCovs_ls <- as.list(rep(NA, length(TopoCovs_vec)))
   names(TopoCovs_ls) <- c(TopoNames_vec)
   ## Downloading, unpacking, and stacking
-for(Topo_Iter in TopoCovs_vec){
-  if(!file.exists(file.path(Dir.COV, paste0(Topo_Iter, ".nc")))) { # if not downloaded and processed yet
-    print(paste("Handling", Topo_Iter, "data."))
-    Dir.Soil <- file.path(Dir.COV, Topo_Iter)
-    dir.create(Dir.Soil)
-    ## I used this function to obtain the rar archives from the data base, extracted the data by hand, and recompressed them into .zip for retrieval from a google drive for this script to work without forcing the user to step outside of R
-    # httr::GET(paste0("http://www.fao.org/fileadmin/user_upload/soils/HWSD%20Viewer/Glo", Topo_Iter, "_30as.rar?raw=true"),
-    #           write_disk(file.path(Dir.Soil, paste0(Topo_Iter, ".rar"))),
-    #           progress(), overwrite = TRUE) # download data
-    httr::GET("https://www.dropbox.com/sh/dj4avlpkx114pvt/AAAeb5SfGdI2F7lwdrbHS_s6a?raw=true",
-              write_disk(file.path(Dir.COV, "HWSD.zip")),
-              progress(), overwrite = TRUE) # download data
-    unzip(file.path(Dir.COV, "HWSD.zip"), exdir = Dir.Soil, files = paste0(Topo_Iter, ".zip")) # unzip data
-    unzip(file.path(Dir.Soil, paste0(Topo_Iter, ".zip")), exdir = Dir.Soil) # unzip data
-    File <- list.files(Dir.Soil, pattern = ".asc")[1] # only keep first soil layer
-    Soil_ras <- raster(file.path(Dir.Soil, File)) # load data
-    TopoCovs_ls[[which(TopoCovs_vec == Topo_Iter)]] <- Soil_ras # save to list
-    writeRaster(x = Soil_ras, filename = file.path(Dir.COV, Topo_Iter), format = "CDF")
-    plot(Soil_ras, main = Topo_Iter, colNA = "black")
-    unlink(Dir.Soil, recursive = TRUE)
-  }else{
-    print(paste(Topo_Iter, "already downloaded and processed."))
-    TopoCovs_ls[[which(TopoCovs_vec == Topo_Iter)]] <- raster(file.path(Dir.COV, paste0(Topo_Iter, ".nc")))
+  for(Topo_Iter in TopoCovs_vec){
+    if(!file.exists(file.path(Dir.COV, paste0(Topo_Iter, ".nc")))) { # if not downloaded and processed yet
+      print(paste("Handling", Topo_Iter, "data."))
+      Dir.Soil <- file.path(Dir.COV, Topo_Iter)
+      dir.create(Dir.Soil)
+      ## I used this function to obtain the rar archives from the data base, extracted the data by hand, and recompressed them into .zip for retrieval from a google drive for this script to work without forcing the user to step outside of R
+      # httr::GET(paste0("http://www.fao.org/fileadmin/user_upload/soils/HWSD%20Viewer/Glo", Topo_Iter, "_30as.rar?raw=true"),
+      #           write_disk(file.path(Dir.Soil, paste0(Topo_Iter, ".rar"))),
+      #           progress(), overwrite = TRUE) # download data
+      httr::GET("https://www.dropbox.com/sh/dj4avlpkx114pvt/AAAeb5SfGdI2F7lwdrbHS_s6a?raw=true",
+                write_disk(file.path(Dir.COV, "HWSD.zip")),
+                progress(), overwrite = TRUE) # download data
+      unzip(file.path(Dir.COV, "HWSD.zip"), exdir = Dir.Soil, files = paste0(Topo_Iter, ".zip")) # unzip data
+      unzip(file.path(Dir.Soil, paste0(Topo_Iter, ".zip")), exdir = Dir.Soil) # unzip data
+      File <- list.files(Dir.Soil, pattern = ".asc")[1] # only keep first soil layer
+      Soil_ras <- raster(file.path(Dir.Soil, File)) # load data
+      TopoCovs_ls[[which(TopoCovs_vec == Topo_Iter)]] <- Soil_ras # save to list
+      writeRaster(x = Soil_ras, filename = file.path(Dir.COV, Topo_Iter), format = "CDF")
+      plot(Soil_ras, main = Topo_Iter, colNA = "black")
+      unlink(Dir.Soil, recursive = TRUE)
+    }else{
+      print(paste(Topo_Iter, "already downloaded and processed."))
+      TopoCovs_ls[[which(TopoCovs_vec == Topo_Iter)]] <- raster(file.path(Dir.COV, paste0(Topo_Iter, ".nc")))
+    }
+    unlink(file.path(Dir.COV, "HWSD.zip"))
   }
-  unlink(file.path(Dir.COV, "HWSD.zip"))
-}
-
-if(!file.exists(file.path(Dir.COV, "Topo_AK.nc")) | !file.exists(file.path(Dir.COV, "Topo_UK.nc"))){
-  TopoCovs_stack <- stack(TopoCovs_ls)
-  TopoCovs_AK <- crop(TopoCovs_stack, AK_shp)
-  TopoCovs_AK <- mask(TopoCovs_AK, AK_shp)
-  TopoCovs_AK[[13]] <- TopoCovs_AK[[1]]+
-    TopoCovs_AK[[2]]*2+TopoCovs_AK[[3]]*3+
-    TopoCovs_AK[[4]]*4+TopoCovs_AK[[5]]*5+
-    TopoCovs_AK[[6]]*6+TopoCovs_AK[[7]]*7+
-    TopoCovs_AK[[8]]*8
-  names(TopoCovs_AK)[13] <- "Slopes"
-  writeRaster(x = TopoCovs_AK, filename = file.path(Dir.COV, "Topo_AK"), format = "CDF")
-  TopoCovs_UK <- crop(TopoCovs_stack, UK_shp)
-  TopoCovs_UK <- mask(TopoCovs_UK, UK_shp)
-  TopoCovs_UK[[13]] <- TopoCovs_UK[[1]]+
-    TopoCovs_UK[[2]]*2+TopoCovs_UK[[3]]*3+
-    TopoCovs_UK[[4]]*4+TopoCovs_UK[[5]]*5+
-    TopoCovs_UK[[6]]*6+TopoCovs_UK[[7]]*7+
-    TopoCovs_UK[[8]]*8
-  names(TopoCovs_UK)[13] <- "Slopes"
-  writeRaster(x = TopoCovs_UK, filename = file.path(Dir.COV, "Topo_UK"), format = "CDF")
-}else{
+  
+  if(!file.exists(file.path(Dir.COV, "Topo_AK.nc"))){
+    TopoCovs_stack <- stack(TopoCovs_ls)
+    TopoCovs_AK <- crop(TopoCovs_stack, AK_shp)
+    TopoCovs_AK <- mask(TopoCovs_AK, AK_shp)
+    TopoCovs_AK[[13]] <- TopoCovs_AK[[1]]+
+      TopoCovs_AK[[2]]*2+TopoCovs_AK[[3]]*3+
+      TopoCovs_AK[[4]]*4+TopoCovs_AK[[5]]*5+
+      TopoCovs_AK[[6]]*6+TopoCovs_AK[[7]]*7+
+      TopoCovs_AK[[8]]*8
+    names(TopoCovs_AK)[13] <- "Slopes"
+    writeRaster(x = TopoCovs_AK, filename = file.path(Dir.COV, "Topo_AK"), format = "CDF")
+  }
+  if(!file.exists(file.path(Dir.COV, "Topo_UK.nc"))){
+    TopoCovs_UK <- crop(TopoCovs_stack, UK_shp)
+    TopoCovs_UK <- mask(TopoCovs_UK, UK_shp)
+    TopoCovs_UK[[13]] <- TopoCovs_UK[[1]]+
+      TopoCovs_UK[[2]]*2+TopoCovs_UK[[3]]*3+
+      TopoCovs_UK[[4]]*4+TopoCovs_UK[[5]]*5+
+      TopoCovs_UK[[6]]*6+TopoCovs_UK[[7]]*7+
+      TopoCovs_UK[[8]]*8
+    names(TopoCovs_UK)[13] <- "Slopes"
+    writeRaster(x = TopoCovs_UK, filename = file.path(Dir.COV, "Topo_UK"), format = "CDF")
+  }
+  if(!file.exists(file.path(Dir.COV, "Topo_Ken.nc"))){
+    TopoCovs_Ken <- crop(TopoCovs_stack, Ken_shp)
+    TopoCovs_Ken <- mask(TopoCovs_Ken, Ken_shp)
+    TopoCovs_Ken[[13]] <- TopoCovs_Ken[[1]]+
+      TopoCovs_Ken[[2]]*2+TopoCovs_Ken[[3]]*3+
+      TopoCovs_Ken[[4]]*4+TopoCovs_Ken[[5]]*5+
+      TopoCovs_Ken[[6]]*6+TopoCovs_Ken[[7]]*7+
+      TopoCovs_Ken[[8]]*8
+    names(TopoCovs_Ken)[13] <- "Slopes"
+    writeRaster(x = TopoCovs_Ken, filename = file.path(Dir.COV, "Topo_Ken"), format = "CDF")
+  }
+  
   TopoCovs_AK <- stack(file.path(Dir.COV, "Topo_AK.nc"))
+  names(TopoCovs_AK) <- c(TopoNames_vec, "Slopes")
   TopoCovs_UK <- stack(file.path(Dir.COV, "Topo_UK.nc"))
-}
+  names(TopoCovs_UK) <- c(TopoNames_vec, "Slopes")
+  TopoCovs_Ken <- stack(file.path(Dir.COV, "Topo_Ken.nc"))
+  names(TopoCovs_Ken) <- c(TopoNames_vec, "Slopes")
 }
 
 #### .   ERA5-LAND REFERENCES (for resampling covariates data) -----------------------------------------------------------
 if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV, "Covariates_AK.rds")))) != 2){
-if(!file.exists(file.path(Dir.Figures, "Ref_UK.nc"))){
-  REF_UK <- download_ERA(
-    Variable = "2m_temperature",
-    DateStart = "1984-10-01",
-    DateStop = "1984-10-31",
-    TResolution = "month",
-    TStep = 1,
-    Extent = UK_shp,
-    Dir = Dir.Figures,
-    FileName = "Ref_UK",
-    API_Key = API_Key,
-    API_User = API_User
-  ) 
-}else{
-  REF_UK <- raster(file.path(Dir.Figures, "Ref_UK.nc"))
-}
-if(!file.exists(file.path(Dir.Figures, "Ref_AK.nc"))){
-  REF_AK <- download_ERA(
-    Variable = "2m_temperature",
-    DateStart = "1984-10-01",
-    DateStop = "1984-10-31",
-    TResolution = "month",
-    TStep = 1,
-    Extent = AK_shp,
-    Dir = Dir.Figures,
-    FileName = "Ref_AK",
-    API_Key = API_Key,
-    API_User = API_User
-  ) 
-}else{
-  REF_AK <- raster(file.path(Dir.Figures, "Ref_AK.nc"))
-}
+  if(!file.exists(file.path(Dir.Figures, "Ref_UK.nc"))){
+    REF_UK <- download_ERA(
+      Variable = "2m_temperature",
+      DateStart = "1984-10-01",
+      DateStop = "1984-10-31",
+      TResolution = "month",
+      TStep = 1,
+      Extent = UK_shp,
+      Dir = Dir.Figures,
+      FileName = "Ref_UK",
+      API_Key = API_Key,
+      API_User = API_User
+    ) 
+  }else{
+    REF_UK <- raster(file.path(Dir.Figures, "Ref_UK.nc"))
+  }
+  if(!file.exists(file.path(Dir.Figures, "Ref_Ken.nc"))){
+    REF_AK <- download_ERA(
+      Variable = "2m_temperature",
+      DateStart = "1984-10-01",
+      DateStop = "1984-10-31",
+      TResolution = "month",
+      TStep = 1,
+      Extent = Ken_shp,
+      Dir = Dir.Figures,
+      FileName = "Ref_Ken",
+      API_Key = API_Key,
+      API_User = API_User
+    ) 
+  }else{
+    REF_Ken <- raster(file.path(Dir.Figures, "Ref_Ken.nc"))
+  }
+  if(!file.exists(file.path(Dir.Figures, "Ref_AK.nc"))){
+    REF_AK <- download_ERA(
+      Variable = "2m_temperature",
+      DateStart = "1984-10-01",
+      DateStop = "1984-10-31",
+      TResolution = "month",
+      TStep = 1,
+      Extent = AK_shp,
+      Dir = Dir.Figures,
+      FileName = "Ref_AK",
+      API_Key = API_Key,
+      API_User = API_User
+    ) 
+  }else{
+    REF_AK <- raster(file.path(Dir.Figures, "Ref_AK.nc"))
+  }
 }
 #### .   GMTED 2010 ELEVATION DATA (for kriging) -----------------------------------------------------------
-if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV, "Covariates_AK.rds")))) != 2){
+if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV, "Covariates_AK.rds"), file.path(Dir.COV, "Covariates_Ken.rds")))) != 3){
   GMTED_UK <- download_DEM(
     Train_ras = REF_UK,
     Target_res = TopoCovs_UK[[1]],
@@ -223,27 +264,40 @@ if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV,
     Dir = Dir.COV,
     Keep_Temporary = TRUE
   )
+  GMTED_Ken <- download_DEM(
+    Train_ras = REF_Ken,
+    Target_res = TopoCovs_Ken[[1]],
+    Shape = Ken_shp,
+    Dir = Dir.COV,
+    Keep_Temporary = TRUE
+  )
 }
 #### .   COVARIATE RASTERS (combining covariate data for each region) -----------------------------------------------------------
-if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV, "Covariates_AK.rds")))) != 2){
+if(sum(file.exists(c(file.path(Dir.COV, "Covariates_UK.rds"), file.path(Dir.COV, "Covariates_AK.rds"), file.path(Dir.COV, "Covariates_Ken.rds")))) != 3){
   #### TARGET RESOLUTION (30 arc seconds)
   Covs_UK <- list(stack(SoilCovs_UK, TopoCovs_UK, GMTED_UK[[2]]))
   names(Covs_UK[[1]]) <- c(SoilCovs_vec, TopoNames_vec, "Slopes", "DEM")
   Covs_AK <- list(stack(SoilCovs_AK, TopoCovs_AK, GMTED_AK[[2]]))
   names(Covs_AK[[1]]) <- c(SoilCovs_vec, TopoNames_vec, "Slopes", "DEM")
+  Covs_Ken <- list(stack(SoilCovs_Ken, TopoCovs_Ken, GMTED_Ken[[2]]))
+  names(Covs_Ken[[1]]) <- c(SoilCovs_vec, TopoNames_vec, "Slopes", "DEM")
   
   #### TRAINING RESOLUTION (era5-land)
   Covs_UK[[2]] <- stack(resample(x = stack(SoilCovs_UK, TopoCovs_UK), y = GMTED_UK[[1]]), GMTED_UK[[1]])
   names(Covs_UK[[2]]) <- c(SoilCovs_vec, TopoNames_vec, "Slopes", "DEM")
   Covs_AK[[2]] <- stack(resample(x = stack(SoilCovs_AK, TopoCovs_AK), y = GMTED_AK[[1]]), GMTED_AK[[1]])
   names(Covs_AK[[2]]) <- c(SoilCovs_vec, TopoNames_vec, "Slopes", "DEM")
+  Covs_Ken[[2]] <- stack(resample(x = stack(SoilCovs_Ken, TopoCovs_Ken), y = GMTED_Ken[[1]]), GMTED_Ken[[1]])
+  names(Covs_Ken[[2]]) <- c(SoilCovs_vec, TopoNames_vec, "Slopes", "DEM")
   
   #### SAVING DATA FOR EASY RETRIEVAL
   saveRDS(object = Covs_UK, file = file.path(Dir.COV, "Covariates_UK.rds"))
   saveRDS(object = Covs_AK, file = file.path(Dir.COV, "Covariates_AK.rds"))
+  saveRDS(object = Covs_Ken, file = file.path(Dir.COV, "Covariates_Ken.rds"))
 }else{
   Covs_UK <- readRDS(file.path(Dir.COV, "Covariates_UK.rds"))
   Covs_AK <- readRDS(file.path(Dir.COV, "Covariates_AK.rds"))
+  Covs_Ken <- readRDS(file.path(Dir.COV, "Covariates_Ken.rds"))
 }
 
 #### [FIGURE 1] (The effect of different Co-Variates on downscaling) -----------------------------------------------------------
@@ -852,387 +906,7 @@ if(sum(file.exists(c(file.path(Dir.Fig2, "Fig2FStatClima.nc"), file.path(Dir.Fig
   ) 
 }
 
-
-#### [FIGURE 3] (Kriged Products vs. Competitor Climate Products for all months Jan/1981-Dec/2010) -----------------------------------------------------------
-Dir.Fig3 <- file.path(Dir.Figures, "Figure3")
-if(!dir.exists(Dir.Fig3)){dir.create(Dir.Fig3)}
-options(timeout=500)
-
-#### .   ERA5-LAND -----------------------------------------------------------
-if(!file.exists(file.path(Dir.Fig3, "Era5Land_UK.nc"))){
-  Era5Land_UK <- download_ERA(
-    Variable = "2m_temperature",
-    DateStart = "1981-01-01",
-    DateStop = "2000-12-31",
-    TResolution = "month",
-    TStep = 1,
-    Extent = UK_shp,
-    Dir = Dir.Fig3,
-    FileName = "Era5Land_UK",
-    API_Key = API_Key,
-    API_User = API_User
-  ) 
-}else{
-  Era5Land_UK <- stack(file.path(Dir.Fig3, "Era5Land_UK.nc"))
-}
-if(!file.exists(file.path(Dir.Fig3, "Era5Land_AK.nc"))){
-  Era5Land_AK <- download_ERA(
-    Variable = "2m_temperature",
-    DateStart = "1981-01-01",
-    DateStop = "2000-12-31",
-    TResolution = "month",
-    TStep = 1,
-    Extent = AK_shp,
-    Dir = Dir.Fig3,
-    FileName = "Era5Land_AK",
-    API_Key = API_Key,
-    API_User = API_User
-  ) 
-}else{
-  Era5Land_AK <- stack(file.path(Dir.Fig3, "Era5Land_AK.nc"))
-}
-
-#### .   TERRACLIMATE -----------------------------------------------------------
-### TerraClimate 1958 - 2015, monthly, 4x4km ---
-## (https://www.northwestknowledge.net/data/5956e20ceb1bc6513f464d11/unzipped/TERRACLIMATE/ & https://climate.northwestknowledge.net/TERRACLIMATE/index_directDownloads.php)
-## NOTE: Yes, no average temperature. Weird, I know. Daily records available for Europe only here: https://www.envidat.ch/#/metadata/eur11
-Dir.TC <- file.path(Dir.Fig3, "TerraClimate")
-if(!dir.exists(Dir.TC)){dir.create(Dir.TC)}
-
-if(sum(file.exists(c(file.path(Dir.TC, paste("TC", "tmean", "AK.nc", sep="_")), file.path(Dir.TC, paste("TC", "tmean", "UK.nc", sep="_"))))) != 2){
-  Vars <- c("tmin", "tmax")
-  dates <- 1981:2000
-  for(i in 1:length(Vars)){
-    if(file.exists(file.path(Dir.TC, paste0("TC_", Vars[i], ".nc")))){next()}
-    Dir.Iter <- file.path(Dir.TC, Vars[i])
-    dir.create(Dir.Iter)
-    ## MONTHLY
-    for(k in 1:length(dates)){
-      URL <- paste0("https://climate.northwestknowledge.net/TERRACLIMATE-DATA/TerraClimate_", Vars[i], "_", dates[k], ".nc")
-      if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")))){
-        download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")), method="libcurl", mode = "wb")
-      }
-    }
-    setwd(Dir.Iter)
-    BRICK <- stack(list.files(Dir.Iter, pattern = ".nc"))
-    setwd(Dir.TC)
-    TC_AK <- crop(BRICK, AK_shp)
-    TC_AK <- mask(TC_AK, AK_shp)
-    writeRaster(x = TC_AK, filename = file.path(Dir.TC, paste("TC", Vars[i], "AK", sep="_")), format = "CDF")
-    TC_UK <- crop(BRICK, UK_shp)
-    TC_UK <- mask(TC_UK, UK_shp)
-    writeRaster(x = TC_UK, filename = file.path(Dir.TC, paste("TC", Vars[i], "UK", sep="_")), format = "CDF")
-    unlink(Dir.Iter, recursive = TRUE)
-  }
-  ## Creating mean rasters
-  AK_fs <- list.files(path = Dir.TC, pattern = "AK")
-  AK_max <- stack(file.path(Dir.TC, AK_fs[[1]]))
-  AK_min <- stack(file.path(Dir.TC, AK_fs[[2]]))
-  AK_mean <- stack(AK_max, AK_min)
-  ID <- rep(1:240, 2)
-  AK_mean <- stackApply(x = AK_mean, indices = ID, fun = mean)
-  writeRaster(x = AK_mean, filename = file.path(Dir.TC, paste("TC", "tmean", "AK", sep="_")), format = "CDF")
-  unlink(file.path(Dir.TC, AK_fs))
-  UK_fs <- list.files(path = Dir.TC, pattern = "UK")
-  UK_max <- stack(file.path(Dir.TC, UK_fs[[1]]))
-  UK_min <- stack(file.path(Dir.TC, UK_fs[[2]]))
-  UK_mean <- stack(UK_max, UK_min)
-  ID <- rep(1:240, 2)
-  UK_mean <- stackApply(x = UK_mean, indices = ID, fun = mean)
-  writeRaster(x = UK_mean, filename = file.path(Dir.TC, paste("TC", "tmean", "UK", sep="_")), format = "CDF")
-  unlink(file.path(Dir.TC, UK_fs))
-}
-TC_AK <- stack(file.path(Dir.TC, paste("TC", "tmean", "AK.nc", sep="_")))
-TC_UK <- stack(file.path(Dir.TC, paste("TC", "tmean", "UK.nc", sep="_")))
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3A.nc"), file.path(Dir.Fig3, "SE_Fig3A.nc")))) != 2){
-  Fig3A_ls <- krigR(
-    Data = Era5Land_UK,
-    Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK[[1]], TC_UK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "Fig3A",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3D.nc"), file.path(Dir.Fig3, "SE_Fig3D.nc")))) != 2){
-  Fig3D_ls <- krigR(
-    Data = Era5Land_AK,
-    Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK[[1]]$DEM, TC_AK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "Fig3D",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-#### .   CHELSA -----------------------------------------------------------
-### CHELSA 1979-2013, monthly, 1x1km ---
-## (https://chelsa-climate.org/timeseries/)
-## NOTE: The technical specifications list soil water, but the download doesn't present it
-Dir.CH <- file.path(Dir.Fig3, "CHELSA")
-if(!dir.exists(Dir.CH)){dir.create(Dir.CH)}
-
-## MONTHLY
-Vars <- c("tmean")
-dates <- paste(rep(1981:2000, each = 12), str_pad(string = 1:12, width = 2, "left", 0), sep="_")
-for(i in 1:length(Vars)){
-  if(sum(file.exists(c(file.path(Dir.CH, paste("CH", Vars[i], "AK.nc", sep="_")), file.path(Dir.CH, paste("CH", Vars[i], "UK.nc", sep="_"))))) == 2){
-    CHELSA_UK <- stack(file.path(Dir.CH, paste("CH", Vars[i], "UK.nc", sep="_")))
-    CHELSA_AK <- stack(file.path(Dir.CH, paste("CH", Vars[i], "AK.nc", sep="_")))
-    next()
-  }
-  Dir.Iter <- file.path(Dir.CH, Vars[i])
-  dir.create(Dir.Iter)
-  for(k in 1:length(dates)){
-    URL <- paste0("https://os.zhdk.cloud.switch.ch/envicloud/chelsa/chelsa_V1/timeseries/", Vars[i],"/CHELSA_", Vars[i],"_", dates[k], "_V1.2.1.tif")
-    if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".tif")))){
-      download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".tif")), mode="wb") # download cultural vector
-    }
-  }
-  setwd(Dir.Iter)
-  BRICK <- stack(list.files(Dir.Iter, pattern = ".tif"))
-  setwd(Dir.CH)
-  CHELSA_AK <- crop(BRICK, AK_shp)
-  CHELSA_AK <- mask(CHELSA_AK, AK_shp)/10-273.15 # CHELSA reported as 10*C, conver to K
-  writeRaster(x = CHELSA_AK, filename = file.path(Dir.CH, paste("CH", Vars[i], "AK", sep="_")), format = "CDF")
-  CHELSA_UK <- crop(BRICK, UK_shp)
-  CHELSA_UK <- mask(CHELSA_UK, UK_shp)/10-273.15 # CHELSA reported as 10*C, conver to K
-  writeRaster(x = CHELSA_UK, filename = file.path(Dir.CH, paste("CH", Vars[i], "UK", sep="_")), format = "CDF")
-  unlink(Dir.Iter, recursive = TRUE)
-}
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3B.nc"), file.path(Dir.Fig3, "SE_Fig3B.nc")))) != 2){
-  Fig3B_ls <- krigR(
-    Data = Era5Land_UK,
-    Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK[[1]]$DEM, CHELSA_UK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "Fig3B",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3E.nc"), file.path(Dir.Fig3, "SE_Fig3E.nc")))) != 2){
-  Fig3E_ls <- krigR(
-    Data = Era5Land_AK,
-    Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK[[1]]$DEM, CHELSA_AK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "Fig3E",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-#### .   WORLDCLIM -----------------------------------------------------------
-### WORLDCLIM 1960-2018/1970-2000, monthly, 5x5km ---
-## (https://www.worldclim.org/data/monthlywth.html)
-## It's either 1x1km of climatologies or 2.5minutes (5x5km)
-Dir.WC <- file.path(Dir.Fig3, "WorldClim")
-
-if(sum(file.exists(c(file.path(Dir.WC, paste("WC", "tmean", "AK.nc", sep="_")), file.path(Dir.WC, paste("WC", "tmean", "UK.nc", sep="_"))))) != 2){
-  dir.create(Dir.WC)
-  ## MONTHLY DATA
-  Vars <- c("tmin", "tmax")
-  dates <- paste(seq(1980, 2000, 10), seq(1989, 2009, 10), sep="-")
-  for(i in 1:length(Vars)){
-    if(file.exists(file.path(Dir.WC, paste0("WC_", Vars[i], "_UK.nc")))){next()}
-    Dir.Iter <- file.path(Dir.WC, Vars[i])
-    dir.create(Dir.Iter)
-    for(k in 1:length(dates)){
-      URL <- paste0("https://data.biogeo.ucdavis.edu/data/worldclim/v2.1/hist/wc2.1_2.5m_", Vars[i], "_", dates[k], ".zip")
-      if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")))){
-        Download <- FALSE
-        while(Download == FALSE){
-          try(download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")))) # download cultural vector
-          if(file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")))){
-            Download <- TRUE  
-          }
-        }
-      }
-      if(length(list.files(Dir.Iter, pattern = ".tif")) < 12*9*k){ 
-        unzip(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")), exdir = Dir.Iter) # unzip data
-      }
-    }
-    setwd(Dir.Iter)
-    BRICK <- stack(list.files(Dir.Iter, pattern = ".tif"))
-    setwd(Dir.WC)
-    BRICK <- BRICK[[-1:-12]]
-    BRICK <- BRICK[[1:240]]
-    WC_AK <- crop(BRICK, AK_shp)
-    WC_AK <- mask(WC_AK, AK_shp)
-    writeRaster(x = WC_AK, filename = file.path(Dir.WC, paste("WC", Vars[i], "AK", sep="_")), format = "CDF")
-    WC_UK <- crop(BRICK, UK_shp)
-    WC_UK <- mask(WC_UK, UK_shp)
-    writeRaster(x = WC_UK, filename = file.path(Dir.WC, paste("WC", Vars[i], "UK", sep="_")), format = "CDF")
-    unlink(Dir.Iter, recursive = TRUE)
-  }
-  ## Creating mean rasters
-  AK_fs <- list.files(path = Dir.WC, pattern = "AK")
-  AK_max <- stack(file.path(Dir.WC, AK_fs[[1]]))
-  AK_min <- stack(file.path(Dir.WC, AK_fs[[2]]))
-  AK_mean <- stack(AK_max, AK_min)
-  ID <- rep(1:240, 2)
-  AK_mean <- stackApply(x = AK_mean, indices = ID, fun = mean)
-  writeRaster(x = AK_mean, filename = file.path(Dir.WC, paste("WC", "tmean", "AK", sep="_")), format = "CDF")
-  unlink(file.path(Dir.WC, AK_fs))
-  UK_fs <- list.files(path = Dir.WC, pattern = "UK")
-  UK_max <- stack(file.path(Dir.WC, UK_fs[[1]]))
-  UK_min <- stack(file.path(Dir.WC, UK_fs[[2]]))
-  UK_mean <- stack(UK_max, UK_min)
-  ID <- rep(1:240, 2)
-  UK_mean <- stackApply(x = UK_mean, indices = ID, fun = mean)
-  writeRaster(x = UK_mean, filename = file.path(Dir.WC, paste("WC", "tmean", "UK", sep="_")), format = "CDF")
-  unlink(file.path(Dir.WC, UK_fs))
-}
-WC_AK <- stack(file.path(Dir.WC, paste("WC", "tmean", "AK.nc", sep="_")))
-WC_UK <- stack(file.path(Dir.WC, paste("WC", "tmean", "UK.nc", sep="_")))
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3C.nc"), file.path(Dir.Fig3, "SE_Fig3C.nc")))) != 2){
-  Fig3C_ls <- krigR(
-    Data = Era5Land_UK,
-    Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK[[1]]$DEM, WC_UK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "Fig3C",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "Fig3F.nc"), file.path(Dir.Fig3, "SE_Fig3F.nc")))) != 2){
-  Fig3F_ls <- krigR(
-    Data = Era5Land_AK,
-    Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK[[1]]$DEM, WC_AK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "Fig3F",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-
-#### CLIMATOLOGY FOR WORLDLCIM S2.1
-URL <- paste0("https://biogeo.ucdavis.edu/data/worldclim/v2.1/base/wc2.1_30s_tavg.zip")
-if(!file.exists(file.path(Dir.WC, "wc2.1_30s_tavg_01.tif"))){
-  Download <- FALSE
-  while(Download == FALSE){
-    try(download.file(URL, destfile = file.path(Dir.WC, "wc2.1_30s_tavg.zip")))
-    if(file.exists(file.path(Dir.WC, "wc2.1_30s_tavg.zip"))){
-      Download <- TRUE  
-    }
-  }
-  unzip(file.path(Dir.WC, "wc2.1_30s_tavg.zip"), exdir = Dir.WC) # unzip data
-  unlink(file.path(Dir.WC, "wc2.1_30s_tavg.zip"), recursive = TRUE)
-}
-
-if(sum(file.exists(file.path(Dir.WC, "WC_Climat_AK.nc"), file.path(Dir.WC, "WC_Climat_AK.nc"))) != 2){
-  setwd(Dir.WC)
-  WC_Climatology <- stack(list.files(Dir.WC, pattern = ".tif"))
-  setwd(Dir.Base)
-  WC_C_AK <- crop(WC_Climatology, AK_shp)
-  WC_C_AK <- mask(WC_C_AK, AK_shp)
-  writeRaster(x = WC_C_AK, filename = file.path(Dir.WC, "WC_Climat_AK"), format = "CDF")
-  WC_C_UK <- crop(WC_Climatology, UK_shp)
-  WC_C_UK <- mask(WC_C_UK, UK_shp)
-  writeRaster(x = WC_C_UK, filename = file.path(Dir.WC, "WC_Climat_UK"), format = "CDF")
-}else{
-  WC_C_AK <- stack(file.path(Dir.WC, "WC_Climat_AK.nc"))
-  WC_C_UK <- stack(file.path(Dir.WC, "WC_Climat_UK.nc"))
-}
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "TabClimWCAK.nc"), file.path(Dir.Fig3, "SE_TabClimWCAK.nc")))) != 2){
-  TabClimWCAK_ls <- krigR(
-    Data = stackApply(x = Era5Land_AK, indices = rep(1:12, 20), fun = mean),
-    Covariates_coarse = Covs_AK[[2]],
-    Covariates_fine = resample(Covs_AK[[1]]$DEM, WC_C_AK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "TabClimWCAK",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-if(sum(file.exists(c(file.path(Dir.Fig3, "TabClimWCUK.nc"), file.path(Dir.Fig3, "SE_TabClimWCUK.nc")))) != 2){
-  TabClimWCUK_ls <- krigR(
-    Data = stackApply(x = Era5Land_UK, indices = rep(1:12, 20), fun = mean),
-    Covariates_coarse = Covs_UK[[2]],
-    Covariates_fine = resample(Covs_UK[[1]]$DEM, WC_C_UK),
-    KrigingEquation = "ERA ~ DEM",
-    Cores = numberOfCores,
-    Dir = Dir.Fig3,
-    FileName = "TabClimWCUK",
-    Keep_Temporary = FALSE,
-    nmax = 480
-  )
-}
-
-#### [FIGURE S2] (Localised Kriging and the nmax-trade-off) -----------------------------------------------------------
-Dir.FigS2 <- file.path(Dir.Figures, "FigureS2")
-if(!dir.exists(Dir.FigS2)){dir.create(Dir.FigS2)}
-
-if(!file.exists(file.path(Dir.FigS2, "ERA5-Land_SAT.nc"))){
-  Era5Land_SAT <- download_ERA(
-    Variable = "2m_temperature",
-    DateStart = "1984-10-01",
-    DateStop = "1984-10-31",
-    TResolution = "month",
-    TStep = 1,
-    Extent = UK_shp,
-    Dir = Dir.FigS2,
-    FileName = "ERA5-Land_SAT",
-    API_Key = API_Key,
-    API_User = API_User
-  )
-}else{
-  Era5Land_SAT <- raster(file.path(Dir.FigS2, "ERA5-Land_SAT.nc"))
-}
-
-if(!file.exists(file.path(Dir.FigS2, "Time_vec.rds"))){
-  Nmax_vec <- c(15, 20, 30, 40, 50, 60, 70, 80, 110, 140, 170, 200, 260, 320, 400, 480)
-  Time_vec <- rep(NA, length(Nmax_vec))
-  counter <- 1
-  for(Nmax_Iter in Nmax_vec){
-    Begin_time <- Sys.time()
-    krigR(
-      Data = Era5Land_SAT,
-      Covariates_coarse = Covs_UK[[2]],
-      Covariates_fine = Covs_UK[[1]],
-      KrigingEquation = "ERA ~ DEM",
-      Cores = 1,
-      Dir = Dir.FigS2,
-      FileName = paste0("FigS2_", Nmax_Iter, ".nc"),
-      Keep_Temporary = FALSE,
-      nmax = Nmax_Iter
-    ) 
-    End_time <- Sys.time()
-    Time_vec[counter] <- End_time-Begin_time
-    counter <- counter + 1
-}
-saveRDS(object = Time_vec, file = file.path(Dir.FigS2, "Time_vec.rds"))
-}
-
-#### [FIGURE S3] (Downscaling Uncertainty and Confidence in Kriged Products) -----------------------------------------------------------
+#### [FIGURE 3] (Downscaling Uncertainty and Confidence in Kriged Products) -----------------------------------------------------------
 Dir.FigS3 <- file.path(Dir.Figures, "FigureS3")
 if(!dir.exists(Dir.FigS3)){dir.create(Dir.FigS3)}
 
@@ -1245,7 +919,7 @@ if(!file.exists(file.path(Dir.FigS3, "Era5Land_Temp.nc"))){
     TResolution = "month",
     TStep = 1,
     Extent = UK_shp,
-    Dir = Dir.Fig3,
+    Dir = Dir.Fig5,
     FileName = "Era5Land_Temp",
     API_Key = API_Key,
     API_User = API_User
@@ -1327,7 +1001,7 @@ if(!file.exists(file.path(Dir.FigS3, "Era5Land_Qsoil.nc"))){
     TResolution = "month",
     TStep = 1,
     Extent = UK_shp,
-    Dir = Dir.Fig3,
+    Dir = Dir.Fig5,
     FileName = "Era5Land_Qsoil",
     API_Key = API_Key,
     API_User = API_User
@@ -1399,3 +1073,487 @@ if(!file.exists(file.path(Dir.FigS3, "FigS3C_Krig_SloStp.nc"))){
     nmax = 480
   ) 
 }
+
+#### [FIGURE 4] (Localised Kriging and the nmax-trade-off) -----------------------------------------------------------
+Dir.FigS2 <- file.path(Dir.Figures, "FigureS2")
+if(!dir.exists(Dir.FigS2)){dir.create(Dir.FigS2)}
+
+if(!file.exists(file.path(Dir.FigS2, "ERA5-Land_SAT.nc"))){
+  Era5Land_SAT <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1984-10-01",
+    DateStop = "1984-10-31",
+    TResolution = "month",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.FigS2,
+    FileName = "ERA5-Land_SAT",
+    API_Key = API_Key,
+    API_User = API_User
+  )
+}else{
+  Era5Land_SAT <- raster(file.path(Dir.FigS2, "ERA5-Land_SAT.nc"))
+}
+
+if(!file.exists(file.path(Dir.FigS2, "Time_vec.rds"))){
+  Nmax_vec <- c(15, 20, 30, 40, 50, 60, 70, 80, 110, 140, 170, 200, 260, 320, 400, 480)
+  Time_vec <- rep(NA, length(Nmax_vec))
+  counter <- 1
+  for(Nmax_Iter in Nmax_vec){
+    Begin_time <- Sys.time()
+    krigR(
+      Data = Era5Land_SAT,
+      Covariates_coarse = Covs_UK[[2]],
+      Covariates_fine = Covs_UK[[1]],
+      KrigingEquation = "ERA ~ DEM",
+      Cores = 1,
+      Dir = Dir.FigS2,
+      FileName = paste0("FigS2_", Nmax_Iter, ".nc"),
+      Keep_Temporary = FALSE,
+      nmax = Nmax_Iter
+    ) 
+    End_time <- Sys.time()
+    Time_vec[counter] <- End_time-Begin_time
+    counter <- counter + 1
+  }
+  saveRDS(object = Time_vec, file = file.path(Dir.FigS2, "Time_vec.rds"))
+}
+
+#### [FIGURE 5] (Kriged Products vs. Competitor Climate Products for all months Jan/1981-Dec/2010) -----------------------------------------------------------
+Dir.Fig5 <- file.path(Dir.Figures, "Figure5")
+if(!dir.exists(Dir.Fig5)){dir.create(Dir.Fig5)}
+options(timeout=500)
+
+#### .   ERA5-LAND -----------------------------------------------------------
+if(!file.exists(file.path(Dir.Fig5, "Era5Land_UK.nc"))){
+  Era5Land_UK <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "month",
+    TStep = 1,
+    Extent = UK_shp,
+    Dir = Dir.Fig5,
+    FileName = "Era5Land_UK",
+    API_Key = API_Key,
+    API_User = API_User
+  ) 
+}else{
+  Era5Land_UK <- stack(file.path(Dir.Fig5, "Era5Land_UK.nc"))
+}
+if(!file.exists(file.path(Dir.Fig5, "Era5Land_AK.nc"))){
+  Era5Land_AK <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "month",
+    TStep = 1,
+    Extent = AK_shp,
+    Dir = Dir.Fig5,
+    FileName = "Era5Land_AK",
+    API_Key = API_Key,
+    API_User = API_User
+  ) 
+}else{
+  Era5Land_AK <- stack(file.path(Dir.Fig5, "Era5Land_AK.nc"))
+}
+if(!file.exists(file.path(Dir.Fig5, "Era5Land_Ken.nc"))){
+  Era5Land_Ken <- download_ERA(
+    Variable = "2m_temperature",
+    DateStart = "1981-01-01",
+    DateStop = "2000-12-31",
+    TResolution = "month",
+    TStep = 1,
+    Extent = Ken_shp,
+    Dir = Dir.Fig5,
+    FileName = "Era5Land_Ken",
+    API_Key = API_Key,
+    API_User = API_User
+  ) 
+}else{
+  Era5Land_Ken <- stack(file.path(Dir.Fig5, "Era5Land_Ken.nc"))
+}
+
+#### .   TERRACLIMATE -----------------------------------------------------------
+### TerraClimate 1958 - 2015, monthly, 4x4km ---
+## (https://www.northwestknowledge.net/data/5956e20ceb1bc6513f464d11/unzipped/TERRACLIMATE/ & https://climate.northwestknowledge.net/TERRACLIMATE/index_directDownloads.php)
+## NOTE: Yes, no average temperature. Weird, I know. Daily records available for Europe only here: https://www.envidat.ch/#/metadata/eur11
+Dir.TC <- file.path(Dir.Fig5, "TerraClimate")
+if(!dir.exists(Dir.TC)){dir.create(Dir.TC)}
+
+if(sum(file.exists(c(file.path(Dir.TC, paste("TC", "tmean", "AK.nc", sep="_")), file.path(Dir.TC, paste("TC", "tmean", "Ken.nc", sep="_")), file.path(Dir.TC, paste("TC", "tmean", "UK.nc", sep="_"))))) != 3){
+  Vars <- c("tmin", "tmax")
+  dates <- 1981:2000
+  for(i in 1:length(Vars)){
+    if(file.exists(file.path(Dir.TC, paste0("TC_", Vars[i], ".nc")))){next()}
+    Dir.Iter <- file.path(Dir.TC, Vars[i])
+    dir.create(Dir.Iter)
+    ## MONTHLY
+    for(k in 1:length(dates)){
+      URL <- paste0("https://climate.northwestknowledge.net/TERRACLIMATE-DATA/TerraClimate_", Vars[i], "_", dates[k], ".nc")
+      if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")))){
+        download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".nc")), method="libcurl", mode = "wb")
+      }
+    }
+    setwd(Dir.Iter)
+    BRICK <- stack(list.files(Dir.Iter, pattern = ".nc"))
+    setwd(Dir.TC)
+    TC_Ken <- crop(BRICK, Ken_shp)
+    TC_Ken <- mask(TC_Ken, Ken_shp)
+    writeRaster(x = TC_Ken, filename = file.path(Dir.TC, paste("TC", Vars[i], "Ken", sep="_")), format = "CDF")
+    TC_AK <- crop(BRICK, AK_shp)
+    TC_AK <- mask(TC_AK, AK_shp)
+    writeRaster(x = TC_AK, filename = file.path(Dir.TC, paste("TC", Vars[i], "AK", sep="_")), format = "CDF")
+    TC_UK <- crop(BRICK, UK_shp)
+    TC_UK <- mask(TC_UK, UK_shp)
+    writeRaster(x = TC_UK, filename = file.path(Dir.TC, paste("TC", Vars[i], "UK", sep="_")), format = "CDF")
+    unlink(Dir.Iter, recursive = TRUE)
+  }
+  ## Creating mean rasters
+  Ken_fs <- list.files(path = Dir.TC, pattern = "Ken")
+  Ken_max <- stack(file.path(Dir.TC, Ken_fs[[1]]))
+  Ken_min <- stack(file.path(Dir.TC, Ken_fs[[2]]))
+  Ken_mean <- stack(Ken_max, Ken_min)
+  ID <- rep(1:240, 2)
+  Ken_mean <- stackApply(x = Ken_mean, indices = ID, fun = mean)
+  writeRaster(x = Ken_mean, filename = file.path(Dir.TC, paste("TC", "tmean", "Ken", sep="_")), format = "CDF")
+  unlink(file.path(Dir.TC, AK_fs))
+  AK_fs <- list.files(path = Dir.TC, pattern = "AK")
+  AK_max <- stack(file.path(Dir.TC, AK_fs[[1]]))
+  AK_min <- stack(file.path(Dir.TC, AK_fs[[2]]))
+  AK_mean <- stack(AK_max, AK_min)
+  ID <- rep(1:240, 2)
+  AK_mean <- stackApply(x = AK_mean, indices = ID, fun = mean)
+  writeRaster(x = AK_mean, filename = file.path(Dir.TC, paste("TC", "tmean", "AK", sep="_")), format = "CDF")
+  unlink(file.path(Dir.TC, AK_fs))
+  UK_fs <- list.files(path = Dir.TC, pattern = "UK")
+  UK_max <- stack(file.path(Dir.TC, UK_fs[[1]]))
+  UK_min <- stack(file.path(Dir.TC, UK_fs[[2]]))
+  UK_mean <- stack(UK_max, UK_min)
+  ID <- rep(1:240, 2)
+  UK_mean <- stackApply(x = UK_mean, indices = ID, fun = mean)
+  writeRaster(x = UK_mean, filename = file.path(Dir.TC, paste("TC", "tmean", "UK", sep="_")), format = "CDF")
+  unlink(file.path(Dir.TC, UK_fs))
+}
+TC_AK <- stack(file.path(Dir.TC, paste("TC", "tmean", "AK.nc", sep="_")))
+TC_Ken <- stack(file.path(Dir.TC, paste("TC", "tmean", "Ken.nc", sep="_")))
+TC_UK <- stack(file.path(Dir.TC, paste("TC", "tmean", "UK.nc", sep="_")))
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3A.nc"), file.path(Dir.Fig5, "SE_Fig3A.nc")))) != 2){
+  Fig3A_ls <- krigR(
+    Data = Era5Land_UK,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = resample(Covs_UK[[1]], TC_UK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3A",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3D.nc"), file.path(Dir.Fig5, "SE_Fig3D.nc")))) != 2){
+  Fig3D_ls <- krigR(
+    Data = Era5Land_AK,
+    Covariates_coarse = Covs_AK[[2]],
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, TC_AK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3D",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3G.nc"), file.path(Dir.Fig5, "SE_Fig3G.nc")))) != 2){
+  Fig3H_ls <- krigR(
+    Data = Era5Land_Ken,
+    Covariates_coarse = Covs_Ken[[2]],
+    Covariates_fine = resample(Covs_Ken[[1]]$DEM, TC_Ken),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3D",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+#### .   CHELSA -----------------------------------------------------------
+### CHELSA 1979-2013, monthly, 1x1km ---
+## (https://chelsa-climate.org/timeseries/)
+## NOTE: The technical specifications list soil water, but the download doesn't present it
+Dir.CH <- file.path(Dir.Fig5, "CHELSA")
+if(!dir.exists(Dir.CH)){dir.create(Dir.CH)}
+
+## MONTHLY
+Vars <- c("tmean")
+dates <- paste(rep(1981:2000, each = 12), str_pad(string = 1:12, width = 2, "left", 0), sep="_")
+for(i in 1:length(Vars)){
+  if(sum(file.exists(c(file.path(Dir.CH, paste("CH", Vars[i], "AK.nc", sep="_")), file.path(Dir.CH, paste("CH", Vars[i], "Ken.nc", sep="_")), file.path(Dir.CH, paste("CH", Vars[i], "UK.nc", sep="_"))))) == 3){
+    CHELSA_UK <- stack(file.path(Dir.CH, paste("CH", Vars[i], "UK.nc", sep="_")))
+    CHELSA_AK <- stack(file.path(Dir.CH, paste("CH", Vars[i], "AK.nc", sep="_")))
+    CHELSA_Ken <- stack(file.path(Dir.CH, paste("CH", Vars[i], "Ken.nc", sep="_")))
+    next()
+  }
+  Dir.Iter <- file.path(Dir.CH, Vars[i])
+  dir.create(Dir.Iter)
+  for(k in 1:length(dates)){
+    URL <- paste0("https://os.zhdk.cloud.switch.ch/envicloud/chelsa/chelsa_V1/timeseries/", Vars[i],"/CHELSA_", Vars[i],"_", dates[k], "_V1.2.1.tif")
+    if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".tif")))){
+      download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".tif")), mode="wb") # download cultural vector
+    }
+  }
+  setwd(Dir.Iter)
+  BRICK <- stack(list.files(Dir.Iter, pattern = ".tif"))
+  setwd(Dir.CH)
+  CHELSA_Ken <- crop(BRICK, Ken_shp)
+  CHELSA_Ken <- mask(CHELSA_Ken, Ken_shp)/10-273.15 # CHELSA reported as 10*C, conver to K
+  writeRaster(x = CHELSA_Ken, filename = file.path(Dir.CH, paste("CH", Vars[i], "Ken", sep="_")), format = "CDF")
+  CHELSA_AK <- crop(BRICK, AK_shp)
+  CHELSA_AK <- mask(CHELSA_AK, AK_shp)/10-273.15 # CHELSA reported as 10*C, conver to K
+  writeRaster(x = CHELSA_AK, filename = file.path(Dir.CH, paste("CH", Vars[i], "AK", sep="_")), format = "CDF")
+  CHELSA_UK <- crop(BRICK, UK_shp)
+  CHELSA_UK <- mask(CHELSA_UK, UK_shp)/10-273.15 # CHELSA reported as 10*C, conver to K
+  writeRaster(x = CHELSA_UK, filename = file.path(Dir.CH, paste("CH", Vars[i], "UK", sep="_")), format = "CDF")
+  unlink(Dir.Iter, recursive = TRUE)
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3B.nc"), file.path(Dir.Fig5, "SE_Fig3B.nc")))) != 2){
+  Fig3B_ls <- krigR(
+    Data = Era5Land_UK,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = resample(Covs_UK[[1]]$DEM, CHELSA_UK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3B",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3E.nc"), file.path(Dir.Fig5, "SE_Fig3E.nc")))) != 2){
+  Fig3E_ls <- krigR(
+    Data = Era5Land_AK,
+    Covariates_coarse = Covs_AK[[2]],
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, CHELSA_AK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3E",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3H.nc"), file.path(Dir.Fig5, "SE_Fig3H.nc")))) != 2){
+  Fig3H_ls <- krigR(
+    Data = Era5Land_Ken,
+    Covariates_coarse = Covs_Ken[[2]],
+    Covariates_fine = resample(Covs_Ken[[1]]$DEM, CHELSA_Ken),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3E",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+#### .   WORLDCLIM -----------------------------------------------------------
+### WORLDCLIM 1960-2018/1970-2000, monthly, 5x5km ---
+## (https://www.worldclim.org/data/monthlywth.html)
+## It's either 1x1km of climatologies or 2.5minutes (5x5km)
+Dir.WC <- file.path(Dir.Fig5, "WorldClim")
+
+if(sum(file.exists(c(file.path(Dir.WC, paste("WC", "tmean", "AK.nc", sep="_")), file.path(Dir.WC, paste("WC", "tmean", "Ken.nc", sep="_")), file.path(Dir.WC, paste("WC", "tmean", "UK.nc", sep="_"))))) != 3){
+  dir.create(Dir.WC)
+  ## MONTHLY DATA
+  Vars <- c("tmin", "tmax")
+  dates <- paste(seq(1980, 2000, 10), seq(1989, 2009, 10), sep="-")
+  for(i in 1:length(Vars)){
+    if(file.exists(file.path(Dir.WC, paste0("WC_", Vars[i], "_UK.nc")))){next()}
+    Dir.Iter <- file.path(Dir.WC, Vars[i])
+    dir.create(Dir.Iter)
+    for(k in 1:length(dates)){
+      URL <- paste0("https://data.biogeo.ucdavis.edu/data/worldclim/v2.1/hist/wc2.1_2.5m_", Vars[i], "_", dates[k], ".zip")
+      if(!file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")))){
+        Download <- FALSE
+        while(Download == FALSE){
+          try(download.file(URL, destfile = file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")))) # download cultural vector
+          if(file.exists(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")))){
+            Download <- TRUE  
+          }
+        }
+      }
+      if(length(list.files(Dir.Iter, pattern = ".tif")) < 12*9*k){ 
+        unzip(file.path(Dir.Iter, paste0(Vars[i],"_", dates[k], ".zip")), exdir = Dir.Iter) # unzip data
+      }
+    }
+    setwd(Dir.Iter)
+    BRICK <- stack(list.files(Dir.Iter, pattern = ".tif"))
+    setwd(Dir.WC)
+    BRICK <- BRICK[[-1:-12]]
+    BRICK <- BRICK[[1:240]]
+    WC_AK <- crop(BRICK, AK_shp)
+    WC_AK <- mask(WC_AK, AK_shp)
+    writeRaster(x = WC_AK, filename = file.path(Dir.WC, paste("WC", Vars[i], "AK", sep="_")), format = "CDF")
+    WC_Ken <- crop(BRICK, Ken_shp)
+    WC_Ken <- mask(WC_Ken, Ken_shp)
+    writeRaster(x = WC_Ken, filename = file.path(Dir.WC, paste("WC", Vars[i], "Ken", sep="_")), format = "CDF")
+    WC_UK <- crop(BRICK, UK_shp)
+    WC_UK <- mask(WC_UK, UK_shp)
+    writeRaster(x = WC_UK, filename = file.path(Dir.WC, paste("WC", Vars[i], "UK", sep="_")), format = "CDF")
+    unlink(Dir.Iter, recursive = TRUE)
+  }
+  ## Creating mean rasters
+  AK_fs <- list.files(path = Dir.WC, pattern = "AK")
+  AK_max <- stack(file.path(Dir.WC, AK_fs[[1]]))
+  AK_min <- stack(file.path(Dir.WC, AK_fs[[2]]))
+  AK_mean <- stack(AK_max, AK_min)
+  ID <- rep(1:240, 2)
+  AK_mean <- stackApply(x = AK_mean, indices = ID, fun = mean)
+  writeRaster(x = AK_mean, filename = file.path(Dir.WC, paste("WC", "tmean", "AK", sep="_")), format = "CDF")
+  unlink(file.path(Dir.WC, AK_fs))
+  Ken_fs <- list.files(path = Dir.WC, pattern = "Ken")
+  Ken_max <- stack(file.path(Dir.WC, Ken_fs[[1]]))
+  Ken_min <- stack(file.path(Dir.WC, Ken_fs[[2]]))
+  Ken_mean <- stack(Ken_max, Ken_min)
+  ID <- rep(1:240, 2)
+  Ken_mean <- stackApply(x = Ken_mean, indices = ID, fun = mean)
+  writeRaster(x = Ken_mean, filename = file.path(Dir.WC, paste("WC", "tmean", "Ken", sep="_")), format = "CDF")
+  unlink(file.path(Dir.WC, Ken_fs))
+  UK_fs <- list.files(path = Dir.WC, pattern = "UK")
+  UK_max <- stack(file.path(Dir.WC, UK_fs[[1]]))
+  UK_min <- stack(file.path(Dir.WC, UK_fs[[2]]))
+  UK_mean <- stack(UK_max, UK_min)
+  ID <- rep(1:240, 2)
+  UK_mean <- stackApply(x = UK_mean, indices = ID, fun = mean)
+  writeRaster(x = UK_mean, filename = file.path(Dir.WC, paste("WC", "tmean", "UK", sep="_")), format = "CDF")
+  unlink(file.path(Dir.WC, UK_fs))
+}
+WC_AK <- stack(file.path(Dir.WC, paste("WC", "tmean", "AK.nc", sep="_")))
+WC_Ken <- stack(file.path(Dir.WC, paste("WC", "tmean", "Ken.nc", sep="_")))
+WC_UK <- stack(file.path(Dir.WC, paste("WC", "tmean", "UK.nc", sep="_")))
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3C.nc"), file.path(Dir.Fig5, "SE_Fig3C.nc")))) != 2){
+  Fig3C_ls <- krigR(
+    Data = Era5Land_UK,
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = resample(Covs_UK[[1]]$DEM, WC_UK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3C",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3F.nc"), file.path(Dir.Fig5, "SE_Fig3F.nc")))) != 2){
+  Fig3F_ls <- krigR(
+    Data = Era5Land_AK,
+    Covariates_coarse = Covs_AK[[2]],
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, WC_AK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3F",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "Fig3I.nc"), file.path(Dir.Fig5, "SE_Fig3I.nc")))) != 2){
+  Fig3I_ls <- krigR(
+    Data = Era5Land_Ken,
+    Covariates_coarse = Covs_Ken[[2]],
+    Covariates_fine = resample(Covs_Ken[[1]]$DEM, WC_Ken),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "Fig3F",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+
+#### CLIMATOLOGY FOR WORLDLCIM S2.1
+URL <- paste0("https://biogeo.ucdavis.edu/data/worldclim/v2.1/base/wc2.1_30s_tavg.zip")
+if(!file.exists(file.path(Dir.WC, "wc2.1_30s_tavg_01.tif"))){
+  Download <- FALSE
+  while(Download == FALSE){
+    try(download.file(URL, destfile = file.path(Dir.WC, "wc2.1_30s_tavg.zip")))
+    if(file.exists(file.path(Dir.WC, "wc2.1_30s_tavg.zip"))){
+      Download <- TRUE  
+    }
+  }
+  unzip(file.path(Dir.WC, "wc2.1_30s_tavg.zip"), exdir = Dir.WC) # unzip data
+  unlink(file.path(Dir.WC, "wc2.1_30s_tavg.zip"), recursive = TRUE)
+}
+
+if(sum(file.exists(file.path(Dir.WC, "WC_Climat_AK.nc"), file.path(Dir.WC, "WC_Climat_Ken.nc"), file.path(Dir.WC, "WC_Climat_AK.nc"))) != 3){
+  setwd(Dir.WC)
+  WC_Climatology <- stack(list.files(Dir.WC, pattern = ".tif"))
+  setwd(Dir.Base)
+  WC_C_AK <- crop(WC_Climatology, AK_shp)
+  WC_C_AK <- mask(WC_C_AK, AK_shp)
+  writeRaster(x = WC_C_AK, filename = file.path(Dir.WC, "WC_Climat_AK"), format = "CDF")
+  WC_C_Ken <- crop(WC_Climatology, Ken_shp)
+  WC_C_Ken <- mask(WC_C_Ken, Ken_shp)
+  writeRaster(x = WC_C_Ken, filename = file.path(Dir.WC, "WC_Climat_Ken"), format = "CDF")
+  WC_C_UK <- crop(WC_Climatology, UK_shp)
+  WC_C_UK <- mask(WC_C_UK, UK_shp)
+  writeRaster(x = WC_C_UK, filename = file.path(Dir.WC, "WC_Climat_UK"), format = "CDF")
+}else{
+  WC_C_AK <- stack(file.path(Dir.WC, "WC_Climat_AK.nc"))
+  WC_C_Ken <- stack(file.path(Dir.WC, "WC_Climat_Ken.nc"))
+  WC_C_UK <- stack(file.path(Dir.WC, "WC_Climat_UK.nc"))
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "TabClimWCAK.nc"), file.path(Dir.Fig5, "SE_TabClimWCAK.nc")))) != 2){
+  TabClimWCAK_ls <- krigR(
+    Data = stackApply(x = Era5Land_AK, indices = rep(1:12, 20), fun = mean),
+    Covariates_coarse = Covs_AK[[2]],
+    Covariates_fine = resample(Covs_AK[[1]]$DEM, WC_C_AK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "TabClimWCAK",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "TabClimWCKen.nc"), file.path(Dir.Fig5, "SE_TabClimWCKen.nc")))) != 2){
+  TabClimWCKen_ls <- krigR(
+    Data = stackApply(x = Era5Land_Ken, indices = rep(1:12, 20), fun = mean),
+    Covariates_coarse = Covs_Ken[[2]],
+    Covariates_fine = resample(Covs_Ken[[1]]$DEM, WC_C_Ken),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "TabClimWCKen",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
+if(sum(file.exists(c(file.path(Dir.Fig5, "TabClimWCUK.nc"), file.path(Dir.Fig5, "SE_TabClimWCUK.nc")))) != 2){
+  TabClimWCUK_ls <- krigR(
+    Data = stackApply(x = Era5Land_UK, indices = rep(1:12, 20), fun = mean),
+    Covariates_coarse = Covs_UK[[2]],
+    Covariates_fine = resample(Covs_UK[[1]]$DEM, WC_C_UK),
+    KrigingEquation = "ERA ~ DEM",
+    Cores = numberOfCores,
+    Dir = Dir.Fig5,
+    FileName = "TabClimWCUK",
+    Keep_Temporary = FALSE,
+    nmax = 480
+  )
+}
+
