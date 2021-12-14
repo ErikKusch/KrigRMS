@@ -33,32 +33,32 @@ DE_shp <-  CountryMask[CountryMask$NAME == "Germany", ]
 
 # DATA DOWNLOAD -----------------------------------------------
 ## HISTORICAL DATA --------------------------------------------
-if(!file.exists("historical_ERA_1981-2000.nc")){
+if(!file.exists("Germany_Jan_clim.nc")){
   AT_ras <- download_ERA(Variable = "2m_temperature",
                DateStart = "1981-01-01",
                DateStop = "1999-12-31",
                TResolution = "month",
                TStep = 1,
                Extent = DE_shp,
-               FileName = "historical_ERA_1981-2000", 
+               FileName = "Germany_Jan_clim.nc", 
                API_Key = API_Key,
                API_User = API_User)
   Index <- rep(1:12, length = nlayers(AT_ras))
   ATClim_ras <- stackApply(AT_ras, indices = Index, fun = mean)
-  writeRaster(ATClim_ras, filename = "historical_ERA_1981-2000.nc", format = "CDF")
+  writeRaster(ATClim_ras[[1]], filename = "Germany_Jan_clim.nc", format = "CDF")
 }else{
-  ATClim_ras <- stack("historical_ERA_1981-2000.nc")
+  ATClim_ras <- stack("Germany_Jan_clim.nc")
 }
 
 ## PROJECTION DATA --------------------------------------------
-train_ERA <- ATClim_ras[[1]]
+train_ERA <- ATClim_ras
 ### SSP ----
 train_SSP <- stack("ssp585_tas_2041-2060.nc")
 train_SSP <- train_SSP[[1]]
 train_SSP <- crop(train_SSP,extent(train_ERA))
 
 ### HISTORICAL ----
-train_HIST <- stack("XXX")
+train_HIST <- stack("historical_tas_1981-2000.nc")
 train_HIST <- train_HIST[[1]]
 train_HIST <- crop(train_HIST,extent(train_ERA))
 
