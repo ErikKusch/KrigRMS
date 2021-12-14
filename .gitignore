@@ -46,5 +46,5 @@ ShapeFiles/
 Covariates/
 Projections/*
 Figures/
-
-!/Projections/X - Raw Data/
+ERL_RevisionFigures/*
+Projections/*
