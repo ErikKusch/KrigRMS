@@ -33,31 +33,34 @@ DE_shp <-  CountryMask[CountryMask$NAME == "Germany", ]
 
 # DATA DOWNLOAD -----------------------------------------------
 ## HISTORICAL DATA --------------------------------------------
-if(!file.exists("Germany_Jan_clim.nc")){
+if(!file.exists("historical_ERA_1981-2000.nc")){
   AT_ras <- download_ERA(Variable = "2m_temperature",
                DateStart = "1981-01-01",
                DateStop = "1999-12-31",
                TResolution = "month",
                TStep = 1,
                Extent = DE_shp,
-               FileName = "Germany_Jan_clim.nc", 
+               FileName = "historical_ERA_1981-2000", 
                API_Key = API_Key,
                API_User = API_User)
   Index <- rep(1:12, length = nlayers(AT_ras))
   ATClim_ras <- stackApply(AT_ras, indices = Index, fun = mean)
-  writeRaster(ATClim_ras[[1]], filename = "Germany_Jan_clim.nc", format = "CDF")
+  writeRaster(ATClim_ras, filename = "historical_ERA_1981-2000.nc", format = "CDF")
 }else{
-  ATClim_ras <- stack("Germany_Jan_clim.nc")
+  ATClim_ras <- stack("historical_ERA_1981-2000.nc")
 }
 
 ## PROJECTION DATA --------------------------------------------
-train_ERA <- ATClim_ras
+train_ERA <- ATClim_ras[[1]]
+### SSP ----
 train_SSP <- stack("ssp585_tas_2041-2060.nc")
-# Select just January from the projection data
 train_SSP <- train_SSP[[1]]
-# Crop to extent of ERA data
 train_SSP <- crop(train_SSP,extent(train_ERA))
 
+### HISTORICAL ----
+train_HIST <- stack("XXX")
+train_HIST <- train_HIST[[1]]
+train_HIST <- crop(train_HIST,extent(train_ERA))
 
 # KRIGING -----------------------------------------------------
 
@@ -83,6 +86,7 @@ Output_ERA <- krigR(
 )
 
 ## PROJECTION DATA --------------------------------------------
+### SSP ----
 GMTED_DE <- download_DEM(
   Train_ras = train_SSP,
   Target_res = 0.008334,
@@ -99,6 +103,27 @@ Output_SSP <- krigR(
   Cores = 1, 
   Dir = getwd(),  
   FileName = "DE_SSP585_2041-2060_nmax120", 
+  Keep_Temporary = FALSE,
+  nmax = 120
+)
+
+### HISTORICAL ----
+GMTED_DE <- download_DEM(
+  Train_ras = train_HIST,
+  Target_res = 0.008334,
+  Keep_Temporary = TRUE
+)
+Cov_coarse <- GMTED_DE[[1]]
+Cov_fine <- GMTED_DE[[2]]
+
+Output_SSP <- krigR(
+  Data = train_HIST,
+  Covariates_coarse = Cov_coarse, 
+  Covariates_fine = Cov_fine,   
+  KrigingEquation = "ERA ~ DEM",  
+  Cores = 1, 
+  Dir = getwd(),  
+  FileName = "DE_CMIP-HIST_nmax120", 
   Keep_Temporary = FALSE,
   nmax = 120
 )
